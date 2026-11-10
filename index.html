@@ -10,7 +10,9 @@
 <meta name="apple-mobile-web-app-title" content="Seyfa">
 <title>Seyfa</title>
 <script>try{var t=localStorage.getItem('budget.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💳</text></svg>">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 :root{
   --bg:#f2f2f7;--card:#fff;--sheet:#f2f2f7;--card-s:#fff;--text:#000;--text2:#3c3c43;--text3:#8e8e93;
@@ -177,6 +179,7 @@ details ol{margin:6px 0;padding-left:20px;color:var(--text2);font-size:14px;line
 .tour-ov.dim{background:rgba(0,0,0,.62)}
 .tour-hl{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.62);outline:2px solid rgba(255,255,255,.95);pointer-events:none;transition:all .25s;display:none}
 .tour-card{position:fixed;width:min(360px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:var(--card-s);color:var(--text);border-radius:18px;padding:20px 20px 18px;box-shadow:0 12px 40px rgba(0,0,0,.4);animation:fade .2s}
+.tour-card.compact{padding:14px 16px 12px}.compact .tc-t{font-size:17px;margin:0 0 6px}.compact .tc-x{font-size:13.5px;line-height:1.4}.compact .tc-x p{margin:0 0 6px}.compact .tc-x ul{margin:0 0 6px}.compact .tc-x li{padding:2px 0 2px 16px}.compact .tc-b{margin-top:10px}.compact .tc-dots{margin-top:10px}
 .tc-n{font-size:12px;color:var(--text3);margin-bottom:2px}.tc-t{font-size:19px;font-weight:700;margin:2px 0 10px}
 .tc-x{font-size:15px;line-height:1.55;color:var(--text2)}.tc-x b{color:var(--text)}.tc-x p{margin:0 0 10px}.tc-x p:last-child{margin-bottom:0}.tc-x ul{list-style:none;margin:2px 0 12px;padding:0}.tc-x li{position:relative;padding:5px 0 5px 18px}.tc-x li::before{content:'';position:absolute;left:3px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--blue)}
 .tc-b{display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:8px}
@@ -946,7 +949,8 @@ const TOUR=[
  {sel:"[data-act=addDebt]",tab:"debts",t:"Долги",x:"<p>Два списка:</p><ul><li><b>«Я должен»</b> — кредиты и займы</li><li><b>«Мне должны»</b> — то, что должны вам</li></ul><p>Укажите остаток, ставку (в месяц или в год), платёж и день платежа.</p><p>Кнопка <b>«Внести платёж»</b> в карточке долга уменьшает остаток и списывает деньги со счёта.</p>"},
  {sel:".grid2",tab:"debts",t:"Сводка по долгам",x:"<p>Вверху:</p><ul><li>сколько вы должны</li><li>сколько должны вам</li><li>минимальные платежи в месяц</li><li><b>чистый капитал</b></li></ul><p>Ниже — ближайшие платежи на две недели и прогресс выплат по каждому долгу.</p>"},
  {sel:"[data-act=addGoal]",tab:"goals",t:"Цели",x:"<p>Два вида целей:</p><ul><li><b>«Накопить»</b> — сумма, срок (датой или в месяцах), взнос, доходность; можно привязать накопительный счёт</li><li><b>«Закрыть долги»</b> — выберите долги и бюджет на погашение</li></ul>"},
- {tab:"goals",t:"Что внутри цели",x:"<p>Откройте цель. Для накоплений вы увидите:</p><ul><li><b>симулятор взноса</b> со слайдером</li><li>варианты стратегии и источники денег</li></ul><p>Для закрытия долгов:</p><ul><li><b>«Лавина»</b> — сначала долг с высокой ставкой</li><li><b>«Снежный ком»</b> — сначала самый маленький долг</li><li><b>«Только минимум»</b> — базовое сравнение</li><li>график остатка и таблицу погашения (с выгрузкой в CSV)</li><li>сценарии «что если платить больше»</li></ul><p>«Сохранить как мой план» запоминает выбор.</p>"},
+ {tab:"goals",t:"Цель-накопление",x:"<p>Откройте цель. Вы увидите:</p><ul><li><b>симулятор взноса</b> со слайдером</li><li>варианты стратегии</li><li>источники денег для взноса</li></ul><p>«Сохранить как мой план» запоминает выбор.</p>"},
+ {tab:"goals",t:"Цель-закрытие долгов",x:"<p>Три стратегии:</p><ul><li><b>«Лавина»</b> — сначала долг с высокой ставкой</li><li><b>«Снежный ком»</b> — сначала самый маленький</li><li><b>«Только минимум»</b> — базовое сравнение</li></ul><p>Ещё: график остатка, таблица погашения (CSV) и сценарии «что если платить больше».</p>"},
  {sel:".seg",tab:"stats",t:"Период статистики",x:"<p>Переключайтесь между <b>Днём, Месяцем и Годом</b>.</p><p>Стрелки ‹ › листают периоды назад и вперёд.</p>"},
  {sel:".grid2",tab:"stats",t:"Плитки итогов",x:"<p>В плитках:</p><ul><li>расходы (со сравнением с прошлым периодом)</li><li>доходы</li><li>результат и норма сбережений</li><li>платежи по долгам</li><li><b>остаток на начало и конец</b> периода</li></ul>"},
  {sel:".chart",tab:"stats",t:"Графики и категории",x:"<p>Нажмите на столбец или точку графика, чтобы увидеть значение.</p><p>Ниже:</p><ul><li>кольцевая диаграмма расходов по категориям</li><li>источники доходов</li><li>расходы по счетам</li><li>самые крупные траты</li></ul>"},
@@ -963,16 +967,21 @@ function tourShow(){const st=TOUR[tourI];
  if(st.tab&&(tab!==st.tab||GL.open)){tab=st.tab;GL.open=null;window.scrollTo(0,0);render()}
  $('#tourCard').innerHTML=`<div class="tc-n">${tourI+1} из ${TOUR.length}</div><div class="tc-t">${st.t}</div><div class="tc-x">${st.x}</div><div class="tc-dots">${TOUR.map((_,i)=>`<i class="${i===tourI?'on':''}"></i>`).join('')}</div>
   <div class="tc-b"><button class="link" data-act="${tourI?'tourPrev':'tourSkip'}">${tourI?'Назад':'Пропустить'}</button><div style="display:flex;gap:8px;align-items:center">${tourI&&tourI<TOUR.length-1?'<button class="link" data-act="tourSkip">Закрыть</button>':''}<button class="btn" data-act="tourNext">${tourI===TOUR.length-1?'Готово':tourI?'Далее':'Начать'}</button></div></div>`;
- const el=st.sel?$(st.sel):null;document.body.style.paddingBottom='75vh';
- if(el&&!el.closest('.fab,.tabbar,.nav')){const r0=el.getBoundingClientRect();window.scrollTo(0,Math.max(0,window.scrollY+r0.top-72))}
+ const el=st.sel?$(st.sel):null;document.body.style.paddingBottom='100vh';
+ if(el&&!tourFixed(el)){const r0=el.getBoundingClientRect();window.scrollTo(0,Math.max(0,window.scrollY+r0.top-56))}
  requestAnimationFrame(tourPlace)}
+function tourFixed(el){for(let n=el;n&&n!==document.body;n=n.parentElement)if(getComputedStyle(n).position==='fixed')return true;return false}
 function tourPlace(){if(tourI<0)return;const st=TOUR[tourI],hl=$('#tourHl'),card=$('#tourCard'),ov=$('#tour');if(!hl||!card)return;
- card.style.maxHeight='';const el=st.sel?$(st.sel):null,cw=card.offsetWidth,ch=card.offsetHeight,W=window.innerWidth,H=window.innerHeight;
+ card.style.maxHeight='';card.classList.remove('compact');const el=st.sel?$(st.sel):null,cw=card.offsetWidth,W=window.innerWidth,H=window.innerHeight;let ch=card.offsetHeight;
  if(el){const r=el.getBoundingClientRect(),pd=6;ov.classList.remove('dim');hl.style.display='block';
   hl.style.left=(r.left-pd)+'px';hl.style.top=(r.top-pd)+'px';hl.style.width=(r.width+pd*2)+'px';hl.style.height=(r.height+pd*2)+'px';
-  const below=H-(r.bottom+pd)-24,above=r.top-pd-24,sideB=below>=ch||below>=above,space=sideB?below:above;let hh=ch;if(ch>space){hh=Math.max(150,space);card.style.maxHeight=hh+'px'}
-  const top=sideB?r.bottom+pd+12:r.top-pd-12-hh;card.style.top=Math.max(8,top)+'px';card.style.left=Math.min(Math.max(12,r.left+r.width/2-cw/2),W-cw-12)+'px'}
- else{ov.classList.add('dim');hl.style.display='none';card.style.top=Math.max(12,(H-ch)/2)+'px';card.style.left=(W-cw)/2+'px'}}
+  const below=H-(r.bottom+pd)-24,above=r.top-pd-24;if(ch>Math.max(below,above)){card.classList.add('compact');ch=card.offsetHeight}
+  const sideB=below>=ch||(above<ch&&below>=above),space=sideB?below:above;let top;
+  if(ch<=space)top=sideB?r.bottom+pd+12:r.top-pd-12-ch;
+  else{/* высокая цель: карточка у края экрана, подсветка обрезается по её границе */const hh=Math.min(ch,H-24);if(hh<ch)card.style.maxHeight=hh+'px';
+   if(sideB){top=H-hh-12;const lim=top-10;if(r.top-pd+r.height+pd*2>lim)hl.style.height=Math.max(40,lim-(r.top-pd))+'px'}else{top=12;const lim=top+hh+10;if(r.top-pd<lim){hl.style.top=lim+'px';hl.style.height=Math.max(40,r.bottom+pd-lim)+'px'}}}
+  card.style.top=Math.max(8,top)+'px';card.style.left=Math.min(Math.max(12,r.left+r.width/2-cw/2),W-cw-12)+'px'}
+ else{ov.classList.add('dim');hl.style.display='none';if(ch>H-24){card.classList.add('compact');ch=card.offsetHeight}card.style.top=Math.max(12,(H-ch)/2)+'px';card.style.left=(W-cw)/2+'px'}}
 document.addEventListener('keydown',e=>{if(tourI<0)return;if(e.key==='ArrowRight')A.tourNext();else if(e.key==='ArrowLeft'&&tourI)A.tourPrev();else if(e.key==='Escape')A.tourSkip()});
 /* ================= ДЕМО ================= */
 function loadDemo(){
@@ -1003,6 +1012,7 @@ function loadDemo(){
  persist();CACHE=null;PNC={}}
 
 applyTheme(getTheme());
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 window.BudgetApp={render,loadDemo,setTab:t=>{tab=t;GL.open=null;render()},state:()=>S};
 render();if(CFG.url)doSync();if(INVITED)setTimeout(()=>toast('Подключено ✓ Данные будут храниться в вашей таблице'),600);
 try{if(!localStorage.getItem('budget.tour')||localStorage.getItem('budget.tourAuto')==='1')setTimeout(tourStart,700)}catch(e){}
