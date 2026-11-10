@@ -59,6 +59,9 @@ h1.large{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.37px;mar
 .row[hidden]{display:none!important}
 .group>.row:not([hidden])~.row:not([hidden])::before{content:"";position:absolute;top:0;left:16px;right:0;height:.5px;background:var(--sep)}
 .group>.row.ico:not([hidden])~.row.ico:not([hidden])::before{left:58px}
+.row.swp{touch-action:pan-y;transition:transform .25s cubic-bezier(.2,.8,.2,1);background:var(--card);-webkit-user-select:none;user-select:none}
+.row.swp.drag{transition:none}
+.row.swp .sdel{position:absolute;left:100%;top:0;bottom:0;width:88px;border:0;background:var(--red);color:#fff;font:inherit;font-weight:600;font-size:16px;cursor:pointer;padding:0}
 .row.tap{cursor:pointer}.row.tap:active{background:var(--fill)}
 .row .grow{flex:1;min-width:0}
 .row label{flex:0 0 auto;min-width:96px}
@@ -134,6 +137,10 @@ h1.large{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.37px;mar
 .qchip .qa{color:var(--text3);font-size:13px}.qchip.qadd{color:var(--blue);font-size:20px;line-height:1;padding:7px 16px}
 .qchip::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--blue)}.qchip.hold::after{width:100%;transition:width 2s linear}
 .toast button.link{pointer-events:auto}
+.chips.two{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:max-content;justify-items:start;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:8px;padding:10px 12px 12px}
+.chips.two::-webkit-scrollbar{display:none}
+.catsearch{padding-bottom:0;min-height:40px}.catsearch input{text-align:left;text-align-last:left}
+.chip.new{background:transparent;color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
 .chip{border:0;background:var(--fill);border-radius:16px;padding:7px 12px;font-size:15px;cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--blue);color:#fff}
 .chip input{border:0;background:transparent;outline:none;width:110px;font:inherit;color:var(--text)}
@@ -283,7 +290,7 @@ const byId=(t,id)=>S[t].find(x=>x.id===id&&!x.deleted);
 function save(t,o){o.updatedAt=Date.now();o.deleted=0;const i=S[t].findIndex(x=>x.id===o.id);if(i>=0)S[t][i]=o;else S[t].push(o);S.dirty[t+':'+o.id]=1;CACHE=null;persist();scheduleSync()}
 function del(t,id){const o=S[t].find(x=>x.id===id);if(!o)return;o.deleted=1;o.updatedAt=Date.now();S.dirty[t+':'+id]=1;CACHE=null;persist();scheduleSync()}
 function setSetting(k,v){PNC={};S.settings[k]={value:v,updatedAt:Date.now()};S.dirty['settings:'+k]=1;persist();scheduleSync()}
-const CSYM={USD:'$',EUR:'€',GBP:'£',PLN:'zł'},CCODES=['USD','EUR','GBP','PLN'];
+const CSYM={USD:'$',EUR:'€',GBP:'£',PLN:'zł'},CCODES=['USD','EUR'];
 function ratesStore(){try{return JSON.parse(localStorage.getItem('budget.rates'))||{}}catch(e){return {}}}
 function rateOf(code){if(!code)return 1;const r=ratesStore(),m=num((r.manual||{})[code]),a=num((r.auto||{})[code]);return m>0?m:a>0?a:0}
 const accCur=id=>{const a=id&&byId('accounts',id);return a&&a.currency?a.currency:''};
@@ -405,7 +412,7 @@ function txMeta(t){
  const ci=catInfo(t.category,t.type);const inc=t.type==='income';
  return {icon:ci.icon,color:ci.color,title:t.category||(inc?'Доход':'Расход'),sub:[t.note,accName(t.accountId)].filter(Boolean).join(' · '),amt:(inc?'+':'−')+moneyC(a,accCur(t.accountId)),cls:inc?'pos':''}}
 function txRow(t,withDate){const m=txMeta(t);
- return `<div class="row ico tap" data-act="editTx" data-id="${t.id}"><div class="ic" style="--c:${m.color}">${m.icon}</div><div class="grow"><div class="ell">${esc(m.title)}</div><div class="sub ell">${withDate?esc(dtf.format(pd(t.date)))+(m.sub?' · ':''):''}${esc(m.sub)}</div></div><div class="amt ${m.cls}">${m.amt}</div></div>`}
+ return `<div class="row ico tap swp" data-act="editTx" data-id="${t.id}"><div class="ic" style="--c:${m.color}">${m.icon}</div><div class="grow"><div class="ell">${esc(m.title)}</div><div class="sub ell">${withDate?esc(dtf.format(pd(t.date)))+(m.sub?' · ':''):''}${esc(m.sub)}</div></div><div class="amt ${m.cls}">${m.amt}</div><button class="sdel" data-act="swDel" data-id="${t.id}" tabindex="-1">Удалить</button></div>`}
 
 function upcomingBlock(days,title){const up=upcoming(days);if(!up.length)return '';
  return `<div class="group-title">${title}</div><div class="group">${up.map(u=>`<div class="row ico tap" data-act="${u.kind==='card'?'editAcc':'editDebt'}" data-id="${u.id}"><div class="ic" style="--c:var(--orange)">🗓️</div><div class="grow"><div class="ell">${esc(u.name)}</div><div class="sub">${u.days===0?'сегодня':u.days===1?'завтра':'через '+u.days+' '+plural(u.days,['день','дня','дней'])} · ${dtf.format(pd(u.date))}</div></div><div class="amt">${u.min>0?money(u.min):'—'}</div></div>`).join('')}</div>`}
@@ -691,7 +698,7 @@ function txSheet(id,preset){
  let type=t.type,cat=t.category;const accs=live('accounts'),debts=live('debts');
  const body=`<div class="seg" id="tx_type">${[['expense','Расход'],['income','Доход'],['transfer','Перевод'],['debtpay','Долг']].map(([k,n])=>`<button data-v="${k}">${n}</button>`).join('')}</div>
  <div class="amtbox"><input id="tx_amt" inputmode="decimal" placeholder="0" value="${t.amount?esc(t.amount):''}" autocomplete="off"><span id="tx_cur">${esc(cur())}</span></div>
- <div class="group" id="tx_cg"><div class="chips" id="tx_cats"></div></div>
+ <div class="group" id="tx_cg"><div class="row catsearch"><input id="tx_cs" placeholder="Поиск или своя категория" autocomplete="off" autocapitalize="sentences" enterkeyhint="done"></div><div class="chips two" id="tx_cats"></div></div>
  <div class="group">
   <div class="row" id="r_acc"><label id="l_acc">Счёт</label><select id="tx_acc"></select></div>
   <div class="row" id="r_to"><label>На счёт</label><select id="tx_to"></select></div>
@@ -706,8 +713,13 @@ function txSheet(id,preset){
   q('#tx_acc').innerHTML=opt('','— без счёта —',t.accountId)+accs.map(a=>opt(a.id,an(a),t.accountId)).join('');
   q('#tx_to').innerHTML=accs.map(a=>opt(a.id,an(a),t.toAccountId||(accs.find(x=>x.id!==t.accountId)||{}).id)).join('');
   q('#tx_debt').innerHTML=debts.map(d=>{const r=C().rem[d.id];return opt(d.id,d.name+' · '+money(r),t.debtId)}).join('')||'<option value="">нет долгов</option>';
-  const renderCats=()=>{const base=(type==='income'?INC:EXP).map(c=>c[0]),all=base.concat(customCats(type));
-   q('#tx_cats').innerHTML=all.map(n=>`<button class="chip ${n===cat?'on':''}" data-c="${esc(n)}">${catInfo(n,type).icon} ${esc(n)}</button>`).join('')+'<button class="chip" data-add>＋ Своя</button>'};
+  const catQ=()=>q('#tx_cs').value.trim();
+  const renderCats=()=>{const base=(type==='income'?INC:EXP).map(c=>c[0]),all=base.concat(customCats(type)),k=catQ().toLowerCase();
+   let list=k?all.filter(n=>n.toLowerCase().includes(k)):all.slice();
+   if(cat&&!k){const i=list.indexOf(cat);if(i>0){list.splice(i,1);list.unshift(cat)}}
+   const exact=all.some(n=>n.toLowerCase()===k);
+   q('#tx_cats').innerHTML=list.map(n=>`<button class="chip ${n===cat?'on':''}" data-c="${esc(n)}">${catInfo(n,type).icon} ${esc(n)}</button>`).join('')+(k&&!exact?`<button class="chip new" data-new="${esc(catQ())}">＋ Создать «${esc(catQ())}»</button>`:'');q('#tx_cats').scrollLeft=0};
+  const addCat=n=>{n=n.trim().slice(0,24);if(!n)return;const l=setting('customCats',[]);if(!l.some(c=>c.n===n&&c.t===type))l.push({n,t:type});setSetting('customCats',l);cat=n;q('#tx_cs').value='';renderCats()};
   const curUi=()=>{const sc=accCur(q('#tx_acc').value),dc=accCur(q('#tx_to').value);q('#tx_cur').textContent=CSYM[sc]||cur();
    const x=type==='transfer'&&q('#tx_acc').value&&q('#tx_to').value&&sc!==dc;q('#r_toamt').hidden=!x;
    if(x){const r=rateOf(sc)&&rateOf(dc)?rateOf(sc)/rateOf(dc):0,a=num(q('#tx_amt').value);q('#l_toamt').textContent='Получено, '+(CSYM[dc]||cur());q('#tx_toamt').placeholder=r&&a>0?String(Math.round(a*r*100)/100):'по курсу'}};
@@ -716,13 +728,14 @@ function txSheet(id,preset){
    const dl=byId('debts',q('#tx_debt').value);
    q('#l_acc').textContent=type==='income'?'На счёт':type==='transfer'?'Со счёта':type==='debtpay'?(dl&&dl.direction==='lent'?'На счёт':'Со счёта'):'Счёт';
    q('#tx_acc').firstChild.textContent=type==='transfer'||type==='debtpay'?'— выберите —':'— без счёта —';renderCats();curUi()};
-  $$('#tx_type button',el).forEach(b=>b.onclick=()=>{type=b.dataset.v;cat='';upd()});
+  $$('#tx_type button',el).forEach(b=>b.onclick=()=>{type=b.dataset.v;cat='';q('#tx_cs').value='';upd()});
   q('#tx_debt').onchange=upd;q('#tx_acc').onchange=curUi;q('#tx_to').onchange=curUi;q('#tx_amt').addEventListener('input',curUi);
-  q('#tx_cats').onclick=e=>{const c=e.target.closest('[data-c]'),ad=e.target.closest('[data-add]');
-   if(c){cat=c.dataset.c;renderCats()}
-   else if(ad){ad.outerHTML='<span class="chip"><input id="newcat" placeholder="Название" maxlength="24"></span>';const inp=q('#newcat');inp.focus();
-    const commit=()=>{const n=inp.value.trim();if(n){const l=setting('customCats',[]);if(!l.some(c=>c.n===n&&c.t===type))l.push({n,t:type});setSetting('customCats',l);cat=n}renderCats()};
-    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit()}};inp.onblur=commit}};
+  q('#tx_cats').onclick=e=>{const c=e.target.closest('[data-c]'),nw=e.target.closest('[data-new]');
+   if(c){cat=c.dataset.c;q('#tx_cs').value='';renderCats()}else if(nw)addCat(nw.dataset.new)};
+  q('#tx_cs').oninput=renderCats;
+  q('#tx_cs').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();const k=catQ().toLowerCase();if(!k)return;
+   const all=(type==='income'?INC:EXP).map(c=>c[0]).concat(customCats(type)),ex1=all.find(n=>n.toLowerCase()===k),m=all.filter(n=>n.toLowerCase().includes(k));
+   if(ex1){cat=ex1;q('#tx_cs').value='';renderCats()}else if(m.length===1){cat=m[0];q('#tx_cs').value='';renderCats()}else addCat(catQ());q('#tx_cs').blur()};
   upd();if(!ex)setTimeout(()=>q('#tx_amt').focus(),150);
   const d=q('[data-del]');if(d)d.onclick=async()=>{if(await confirmSheet('Удалить эту операцию?')){del('transactions',t.id);close();render()}};
  },save:el=>{const q=s=>$(s,el),amount=num(q('#tx_amt').value);
@@ -897,6 +910,30 @@ function quickSheet(id){const L=quickList(),ex=id?L.find(x=>x.id===id):null;
   save:el=>{const q=x=>$(x,el),n=q('#qk_n').value.trim();if(!n){shake(q('#qk_n').closest('.row'));q('#qk_n').focus();return false}
    const o={id:b.id,n,cat:q('#qk_c').value,acc:q('#qk_acc').value,a:num(q('#qk_a').value)},cur0=quickList();
    setSetting('quick',ex?cur0.map(x=>x.id===b.id?o:x):cur0.concat([o]));render();toast(ex?'Сохранено':'Кнопка добавлена')}})}
+
+/* свайп влево на операции: появляется «Удалить» */
+let sw=null,swOpen=null,swMoved=0;
+const SWW=88;
+function swClose(){if(swOpen){swOpen.style.transform='';swOpen=null}}
+document.addEventListener('pointerdown',e=>{const r=e.target.closest('.row.swp');
+ if(swOpen&&swOpen!==r&&!e.target.closest('.sdel'))swClose();
+ if(!r||e.target.closest('.sdel')||(e.pointerType==='mouse'&&e.button!==0))return;
+ sw={r,x:e.clientX,y:e.clientY,base:swOpen===r?-SWW:0,on:false,id:e.pointerId}},true);
+document.addEventListener('pointermove',e=>{if(!sw||e.pointerId!==sw.id)return;const dx=e.clientX-sw.x,dy=e.clientY-sw.y;
+ if(!sw.on){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){sw=null;return}
+  if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)){sw.on=true;sw.r.classList.add('drag');try{sw.r.setPointerCapture(e.pointerId)}catch(x){}}else return}
+ let v=sw.base+dx;if(v>0)v=0;if(v<-SWW)v=-SWW-Math.sqrt(-v-SWW)*3;
+ sw.r.style.transform='translateX('+v+'px)'},true);
+function swEnd(e){if(!sw||(e&&e.pointerId!==sw.id))return;const {r,on,base,x}=sw;sw=null;if(!on)return;
+ r.classList.remove('drag');swMoved=Date.now();
+ const dx=(e?e.clientX:x)-x,v=base+dx;
+ if(v<-SWW/2){if(swOpen&&swOpen!==r)swClose();r.style.transform='translateX(-'+SWW+'px)';swOpen=r}
+ else{r.style.transform='';if(swOpen===r)swOpen=null}}
+document.addEventListener('pointerup',swEnd,true);document.addEventListener('pointercancel',swEnd,true);
+document.addEventListener('click',e=>{
+ const sd=e.target.closest('.sdel');if(sd){e.stopPropagation();e.preventDefault();A.swDel(sd);return}
+ if(Date.now()-swMoved<400&&e.target.closest('.row.swp')&&!e.target.closest('.sdel')){e.stopPropagation();e.preventDefault();return}
+ if(swOpen&&!e.target.closest('.sdel')){e.stopPropagation();e.preventDefault();swClose()}},true);
 let qp=null;
 function qcancel(){if(qp){clearTimeout(qp.t);qp.el.classList.remove('hold');qp=null}}
 document.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-q]');if(!el||(e.pointerType==='mouse'&&e.button!==0))return;qcancel();
@@ -1051,6 +1088,8 @@ async function doSync(manual){
 const A={
  tab(el){tab=el.dataset.v;localStorage.setItem('budget.tab',tab);GL.open=null;window.scrollTo(0,0);render()},
  addTx(){txSheet()},
+ swDel(el){const id=el.dataset.id,t=byId('transactions',id);if(!t)return;swOpen=null;const row=el.closest('.row');del('transactions',id);if(row&&row.closest('.sheet'))row.remove();render();
+  toastAct('Операция удалена','Отменить',()=>{const o=S.transactions.find(x=>x.id===id);if(o){o.deleted=0;o.updatedAt=Date.now();S.dirty['transactions:'+id]=1;CACHE=null;persist();scheduleSync();render()}})},
  editTx(el){const t=byId('transactions',el.dataset.id);if(!t)return;
   if(t.type==='adjust')confirmSheet('Корректировка баланса '+money(t.amount,true)+'. Удалить её?').then(ok=>{if(ok){del('transactions',t.id);render()}});else txSheet(t.id)},
  addAcc(){accSheet()},editAcc(el){accSheet(el.dataset.id)},
