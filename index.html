@@ -227,10 +227,11 @@ let S={};try{S=JSON.parse(localStorage.getItem(LS))||{}}catch(e){}
 S=Object.assign({transactions:[],accounts:[],debts:[],goals:[],settings:{},dirty:{}},S);
 let CFG={url:'',token:''};try{CFG=Object.assign(CFG,JSON.parse(localStorage.getItem(LSC))||{})}catch(e){}
 let INVITED='';
-try{const m=/[#&]cfg=([A-Za-z0-9_-]+)/.exec(location.hash);if(m){let b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
+function parseInvite(str){try{const m=/[#&]?cfg=([A-Za-z0-9_-]+)/.exec(String(str||''));if(!m)return null;let b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
  const j=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b),c=>c.charCodeAt(0))));
- if(j&&typeof j.u==='string'&&/^https:\/\//.test(j.u)&&typeof j.t==='string'&&j.t.length>=16){CFG={url:j.u,token:j.t};localStorage.setItem(LSC,JSON.stringify(CFG));INVITED='1'}
- history.replaceState(null,'',location.pathname+location.search)}}catch(e){}
+ if(j&&typeof j.u==='string'&&/^https:\/\//.test(j.u)&&typeof j.t==='string'&&j.t.length>=16)return{url:j.u,token:j.t}}catch(e){}return null}
+try{const j=parseInvite(location.hash);if(j){CFG=j;localStorage.setItem(LSC,JSON.stringify(CFG));INVITED='1'}
+ if(/cfg=/.test(location.hash))history.replaceState(null,'',location.pathname+location.search)}catch(e){}
 const NEED_V=3;
 const persist=()=>{try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){toast('Не удалось сохранить локально')}};
 
@@ -974,6 +975,7 @@ function settingsSheet(){
   <div class="row"><label>Лимит на день (без плана)</label><input id="s_lim" inputmode="decimal" placeholder="0" value="${num(setting('dailyLimit',0))||''}"></div></div>
  <div class="group-title">Быстрые траты</div><div class="group">${quickList().map(b=>`<div class="row tap" data-act="qEdit" data-id="${esc(b.id)}"><div class="grow">${catInfo(b.cat,'expense').icon} ${esc(b.n)}</div><div class="sub">${num(b.a)>0?money(b.a):'цена не задана'}</div></div>`).join('')}<div class="row tap" data-act="qNew"><div class="grow" style="color:var(--blue)">Добавить кнопку</div></div></div>
  <div class="group-title">Google Таблицы</div><div class="group">
+  <div class="row"><label>Ссылка-приглашение</label><input id="s_inv" placeholder="вставьте ссылку целиком" autocapitalize="off" autocorrect="off"></div>
   <div class="row"><label>URL скрипта</label><input id="s_url" placeholder="https://script.google.com/…/exec" value="${esc(CFG.url)}" autocapitalize="off" autocorrect="off"></div>
   <div class="row"><label>Токен</label><input id="s_tok" type="password" placeholder="пароль из Code.gs" value="${esc(CFG.token)}" autocapitalize="off"></div></div>
  <div class="btnrow"><button class="btn gray" data-test>Проверить и синхронизировать</button></div>
@@ -999,6 +1001,7 @@ function settingsSheet(){
    window.open('https://t.me/'+b.u+'?start='+encodeURIComponent(CFG.token),'_blank')};
   q('[data-pin]').onclick=()=>pinSettings();q('[data-trash]').onclick=()=>trashSheet();
   q('#s_tauto').onchange=e=>{try{e.target.checked?localStorage.setItem('budget.tourAuto','1'):localStorage.removeItem('budget.tourAuto')}catch(x){}};
+  q('#s_inv').oninput=e=>{const j=parseInvite(e.target.value);if(!j)return;q('#s_url').value=j.url;q('#s_tok').value=j.token;e.target.value='';q('#s_status').textContent='Ссылка принята. Нажмите «Проверить и синхронизировать»'};
   q('[data-test]').onclick=async()=>{CFG.url=q('#s_url').value.trim();CFG.token=q('#s_tok').value.trim();localStorage.setItem(LSC,JSON.stringify(CFG));
    if(!CFG.url){q('#s_status').textContent='Укажите URL';return}q('#s_status').textContent='Проверяю…';
    try{await api('ping');q('#s_status').textContent='Соединение установлено. Синхронизирую…';await doSync(true);q('#s_status').textContent=syncState==='ok'?'Готово: данные синхронизированы ✓':'Ошибка: '+lastErr}catch(e){q('#s_status').textContent='Ошибка: '+e.message}};
