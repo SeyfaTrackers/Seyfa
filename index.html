@@ -150,6 +150,13 @@ h1.large{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.37px;mar
 .chips.two::-webkit-scrollbar{display:none}
 .catsearch{padding-bottom:0;min-height:40px}.catsearch input{text-align:left;text-align-last:left}
 .chip.new{background:transparent;color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.calh{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 10px}.calh b{font-size:17px;text-transform:capitalize}.calh button{border:0;background:var(--fill);width:34px;height:34px;border-radius:17px;font-size:18px;color:var(--blue);cursor:pointer}
+.calsum{display:flex;gap:18px;padding:0 4px 12px;font-size:15px}.calsum .e{color:var(--red)}.calsum .i{color:var(--green)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}.cal .wd{text-align:center;font-size:11px;color:var(--text3);padding:2px 0}
+.cal .d{border:0;font:inherit;color:var(--text);background:var(--fill);border-radius:10px;min-height:52px;padding:5px 1px 4px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;line-height:1.15}
+.cal .d .n{font-size:15px;font-weight:600}.cal .d .e,.cal .d .i{font-size:10px;font-weight:500;white-space:nowrap;letter-spacing:-.2px}.cal .d .e{color:var(--red)}.cal .d .i{color:var(--green)}
+.cal .d.z{background:transparent;cursor:default}.cal .d.z .n{color:var(--text3);font-weight:400}.cal .d.o{background:transparent;cursor:default;visibility:hidden}
+.cal .d.t .n{color:var(--blue)}.cal .d.sel{box-shadow:inset 0 0 0 2px var(--blue)}
 .chip{border:0;background:var(--fill);border-radius:16px;padding:7px 12px;font-size:15px;cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--blue);color:#fff}
 .chip input{border:0;background:transparent;outline:none;width:110px;font:inherit;color:var(--text)}
@@ -471,7 +478,7 @@ function viewToday(){
  ${limit>0?`<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>${esc(monthName(dd))}</span><span class="sub">в лимите ${money(mAll)} из ${money(mlim)}</span></div><div class="bar lg"><i style="width:${Math.min(100,mAll/mlim*100).toFixed(1)}%;background:${mAll>mlim?'var(--red)':'var(--blue)'}"></i></div></div>`:''}
  ${planRow}${pfHtml}
  ${d===today()?upcomingBlock(7,'Ближайшие платежи'):''}
- <div class="group-title"><span>Операции</span><button class="link" data-act="allTx">Все операции ›</button></div><div class="group">${txs.length?txs.map(t=>txRow(t)).join(''):'<div class="empty">Операций нет. Нажмите «+», чтобы добавить.</div>'}</div>`}
+ <div class="group-title"><span>Операции</span><span><button class="link" data-act="cal">Календарь</button> · <button class="link" data-act="allTx">Все ›</button></span></div><div class="group">${txs.length?txs.map(t=>txRow(t)).join(''):'<div class="empty">Операций нет. Нажмите «+», чтобы добавить.</div>'}</div>`}
 
 function walletCard(a,spent){
  const b=C().bal[a.id],g=gCls(a.color),gs=gSty(a.color);
@@ -682,7 +689,7 @@ function viewStats(){
  ${accTotal>0&&Object.keys(accE).length>1?coll('accE','Расходы по счетам',`<div class="group">${Object.entries(accE).sort((x,y)=>y[1]-x[1]).map(([n,v])=>`<div class="row"><div class="grow"><div class="ell">${esc(n)}</div><div class="bar" style="margin-top:5px"><i style="width:${(v/accTotal*100).toFixed(1)}%"></i></div></div><div class="amt">${money(v)}</div></div>`).join('')}</div>`):''}
  ${top.length?`<div class="group-title">Самые крупные траты</div><div class="group">${top.map(t=>txRow(t,true)).join('')}</div>`:''}
  ${mode==='day'&&txs.length?`<div class="group-title">Операции дня</div><div class="group">${txs.sort(cmpTx).map(t=>txRow(t)).join('')}</div>`:''}
- <div class="group"><div class="row tap" data-act="allTx"><div class="grow">Все операции</div><div class="sub">поиск и фильтры ›</div></div></div>`}
+ <div class="group"><div class="row tap" data-act="cal"><div class="grow">Календарь</div><div class="sub">расходы и доходы по дням ›</div></div><div class="row tap" data-act="allTx"><div class="grow">Все операции</div><div class="sub">поиск и фильтры ›</div></div></div>`}
 
 /* ================= РЕНДЕР ================= */
 function syncIcon(){const st=syncState;return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 9.5 4 4 0 0 1 17.5 18H7z"/>${st==='off'?'<path d="M4 4l16 16"/>':''}</svg><i class="dot ${st==='ok'?'ok':st==='err'?'err':st==='busy'?'busy':''}"></i>`}
@@ -809,6 +816,33 @@ function txListSheet(f0){
   q('#l_cat').onchange=e=>{F.cat=e.target.value;limit=100;draw()};
   q('#l_per').onchange=e=>{F.per=e.target.value;limit=100;draw()};
   q('#l_list').addEventListener('click',e=>{if(e.target.closest('[data-more]')){limit+=100;draw()}});
+  draw()}});}
+
+function calendarSheet(ref0){
+ let ref=ref0||today(),sel=ref;const T0=today();
+ const body='<div id="c_body"></div>';
+ const {el}=sheet({title:'Календарь',body,noSave:true,onMount:(el)=>{
+  const k=n=>{n=Math.round(n);return Math.abs(n)>=100000?Math.round(n/1000)+'к':nf0.format(n).replace(/ | /g,' ')};
+  const draw=()=>{const d=pd(ref),y=d.getFullYear(),m=d.getMonth(),days=dim(y,m),ym=y+'-'+pad(m+1);
+   const txs=txOn(ym+'-01',ym+'-'+pad(days)),E={},I={};
+   txs.forEach(t=>{if(t.type==='expense')E[t.date]=(E[t.date]||0)+cvt(t);else if(t.type==='income')I[t.date]=(I[t.date]||0)+cvt(t)});
+   const lead=(new Date(y,m,1).getDay()+6)%7;let cells='';
+   for(let i=0;i<lead;i++)cells+='<div class="d o"></div>';
+   for(let n=1;n<=days;n++){const ds=ym+'-'+pad(n),e=E[ds],i=I[ds];
+    cells+=`<button class="d${ds===T0?' t':''}${ds===sel?' sel':''}${!e&&!i?' z':''}" data-d="${ds}"><span class="n">${n}</span>${e?`<span class="e">${k(e)}</span>`:''}${i?`<span class="i">+${k(i)}</span>`:''}</button>`}
+   if(sel.slice(0,7)!==ym)sel=ds0(ym);
+   const dayTx=txOn(sel,sel).sort(cmpTx),de=sumT(dayTx,'expense'),di=sumT(dayTx,'income');
+   $('#c_body',el).innerHTML=`<div class="calh"><button data-m="-1" aria-label="Назад">‹</button><b>${esc(monthName(d))}</b><button data-m="1" aria-label="Вперёд">›</button></div>
+   <div class="calsum"><span>Расходы <b class="e">${money(sumT(txs,'expense'))}</b></span><span>Доходы <b class="i">${money(sumT(txs,'income'))}</b></span></div>
+   <div class="cal">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
+   <div class="group-title"><span>${esc(dtfFull.format(pd(sel)))}</span><span>${de?'−'+money(de):''}${de&&di?' · ':''}${di?'+'+money(di):''}</span></div>
+   <div class="group">${dayTx.length?dayTx.map(t=>txRow(t)).join(''):'<div class="empty">В этот день операций нет</div>'}<div class="row tap" data-cadd><div class="grow" style="color:var(--blue)">＋ Добавить операцию на этот день</div></div></div>`};
+  const ds0=ym=>ym===T0.slice(0,7)?T0:ym+'-01';
+  window.__lr=()=>{if(!el.isConnected){window.__lr=null;return}draw()};
+  el.addEventListener('click',e=>{const dd=e.target.closest('[data-d]'),mm=e.target.closest('[data-m]');
+   if(dd){sel=dd.dataset.d;draw();return}
+   if(mm){ref=shiftMonth(ref.slice(0,7)+'-01',+mm.dataset.m);sel=ds0(ref.slice(0,7));draw();return}
+   if(e.target.closest('[data-cadd]'))txSheet(null,{date:sel})});
   draw()}});}
 
 function catsSheet(){
@@ -1179,6 +1213,7 @@ const A={
  tab(el){tab=el.dataset.v;localStorage.setItem('budget.tab',tab);GL.open=null;window.scrollTo(0,0);render()},
  addTx(){txSheet()},
  allTx(){txListSheet()},
+ cal(){calendarSheet()},
  catTx(el){const [a,b]=rangeOf(ST.mode,ST.ref),d=pd(ST.ref),lab=ST.mode==='day'?dtfFull.format(d):ST.mode==='month'?monthName(d):String(d.getFullYear());txListSheet({cat:el.dataset.n,type:el.dataset.t,from:a,to:b,per:'c',perLabel:lab})},
  coll(el){const c=COLL(),id=el.dataset.v;c[id]=!c[id];try{localStorage.setItem('budget.coll',JSON.stringify(c))}catch(e){}el.classList.toggle('shut',!!c[id]);const b=el.nextElementSibling;if(b)b.hidden=!!c[id]},
  swDel(el){delTxUndo(el.dataset.id,el.closest('.row'))},
