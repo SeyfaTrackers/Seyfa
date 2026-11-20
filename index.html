@@ -433,8 +433,17 @@ function budgetMsg(o){if(!o||o.type!=='expense'||!o.category||!o.date)return '';
  const before=(r.f-num(o.amount))/r.p;if(before<1&&r.pct>=1)return r.n+': план превышен на '+money(r.f-r.p);if(before<.8&&r.pct>=.8)return r.n+': израсходовано '+Math.round(r.pct*100)+'% плана';return ''}
 function budgetAlerts(ym){const rows=budgetRows(ym).filter(r=>r.pct>=.8).sort((a,b)=>b.pct-a.pct).slice(0,3);
  return rows.map(r=>r.pct>=1?`<div class="note" style="margin-top:-10px;color:var(--red)">🔴 ${esc(r.n)}: план превышен на ${money(r.f-r.p)} (${money(r.f)} из ${money(r.p)})</div>`:`<div class="note" style="margin-top:-10px;color:var(--orange)">🟠 ${esc(r.n)}: ${Math.round(r.pct*100)}% плана (${money(r.f)} из ${money(r.p)})</div>`).join('')}
-const counted=t=>t.type==='expense'&&!planNames(t.date.slice(0,7)).has(nk(t.category||'Прочее'));
-const sumC=l=>l.reduce((s,t)=>counted(t)?s+cvt(t):s,0);
+/* Сколько траты уходит в дневной лимит: вне плана — вся сумма; по категории плана — только часть сверх плана (в день, когда порог пройден) */
+function overMap(ym){const key='o:'+ym;if(PNC[key])return PNC[key];const p=getPlan(ym),lim=new Map(),res=new Map(),run=new Map();
+ ((p&&p.exp)||[]).forEach(r=>{if(r.n&&num(r.a)>0)lim.set(nk(r.n),(lim.get(nk(r.n))||0)+num(r.a))});
+ const [y,m]=ym.split('-').map(Number);
+ txOn(ym+'-01',ym+'-'+pad(dim(y,m-1))).filter(t=>t.type==='expense').sort((a,b)=>a.date.localeCompare(b.date)||(a.id>b.id?1:a.id<b.id?-1:0)).forEach(t=>{
+  const k=nk(t.category||'Прочее');if(!lim.has(k))return;const a=cvt(t),before=run.get(k)||0,P=lim.get(k);
+  res.set(t.id,Math.max(0,Math.min(a,before+a-P)));run.set(k,before+a)});
+ return PNC[key]=res}
+const cAmt=t=>{if(t.type!=='expense')return 0;const ym=t.date.slice(0,7);return planNames(ym).has(nk(t.category||'Прочее'))?(overMap(ym).get(t.id)||0):cvt(t)};
+const counted=t=>cAmt(t)>0;
+const sumC=l=>l.reduce((s,t)=>s+cAmt(t),0);
 function totalAt(date){const acc=new Set(live('accounts').map(a=>a.id)),dir={};live('debts').forEach(d=>dir[d.id]=d.direction);let tot=live('accounts').reduce((s,a)=>s+toBase(a.currency||'',num(a.opening)),0);
  for(const t of live('transactions')){if(t.date>date||!acc.has(t.accountId))continue;const a=cvt(t);if(t.type==='income'||t.type==='adjust')tot+=a;else if(t.type==='expense')tot-=a;else if(t.type==='debtpay')tot+=dir[t.debtId]==='lent'?a:-a}return tot}
 function txMeta(t){
@@ -862,7 +871,7 @@ function planSheet(ym){
  const sumHtml=()=>{const c=planCalc(P),daily=c.free/days,share=c.inc>0?c.free/c.inc:0,debts=liabilities().reduce((s,x)=>s+x.bal,0);
   return `<div style="display:flex;justify-content:space-between"><span class="sub">Свободные средства</span><b style="color:${c.free<0?'var(--red)':'var(--green)'}">${money(c.free)}</b></div><div class="big-out" style="margin:6px 0">Бюджет на день: ${money(Math.max(0,daily))}</div><div class="sub">${days} дн. · свободно ${(share*100).toFixed(0)}% дохода · доходы ${money(c.inc)} − план ${money(c.exp+c.debt+c.sav)}</div><div class="sub" style="margin-top:4px">Долги: сейчас ${money(debts)} → после плановых платежей ${money(Math.max(0,debts-c.debt))}</div>${c.free<0?`<div style="margin-top:6px"><span class="badge bad">План превышает доходы на ${money(-c.free)}</span></div>`:c.inc>0&&share<.2?`<div style="margin-top:6px"><span class="badge warn">Свободно меньше 20% дохода</span></div>`:''}`};
  sheet({title:'План · '+monthName(new Date(yy,mm-1,1)),saveLabel:'Сохранить',body:`<datalist id="pl_cats">${cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist><div class="card" id="pl_sum"></div><div id="pl_secs"></div>
-  <div class="note" style="margin-top:-8px">Траты из запланированных категорий учитываются по плану и не уменьшают дневной лимит. Все остальные траты расходуют дневной бюджет.</div>
+  <div class="note" style="margin-top:-8px">Траты в рамках плана категории не уменьшают дневной лимит. Всё, что сверх плана категории, и все траты вне плана расходуют дневной бюджет того дня, когда потрачено.</div>
   <div class="btnrow"><button class="btn gray" data-prev>Из прошлого месяца</button><button class="btn gray" data-debts>Платежи из «Долгов»</button></div>${ex?'<button class="btn red" data-clr>Удалить план</button>':''}`,
   onMount:(el,close)=>{const upd=()=>{$('#pl_sum',el).innerHTML=sumHtml()},rr=()=>{$('#pl_secs',el).innerHTML=secHtml();upd()};rr();
    el.addEventListener('input',e=>{const t=e.target;if(t.classList.contains('pn'))P[t.dataset.k][+t.dataset.i].n=t.value;else if(t.classList.contains('pa')){P[t.dataset.k][+t.dataset.i].a=t.value;upd()}});
