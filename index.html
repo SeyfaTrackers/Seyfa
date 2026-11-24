@@ -280,7 +280,8 @@ const dim=(y,m)=>new Date(y,m+1,0).getDate();
 const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const shiftMonth=(s,n)=>{const d=pd(s),day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+n);d.setDate(Math.min(day,dim(d.getFullYear(),d.getMonth())));return ymd(d)};
 const plural=(n,f)=>{n=Math.abs(n)%100;const k=n%10;return n>10&&n<20?f[2]:k>1&&k<5?f[1]:k===1?f[0]:f[2]};
-const nf=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}),nf0=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0});
+const lazyF=(C,o)=>{const m={};return {format:v=>{const l=LOC();return (m[l]||(m[l]=new C(l,o))).format(v)}}};
+const nf=lazyF(Intl.NumberFormat,{maximumFractionDigits:2}),nf0=lazyF(Intl.NumberFormat,{maximumFractionDigits:0});
 const setting=(k,d)=>{const s=S.settings[k];return s===undefined||s.value===undefined?d:s.value};
 const cur=()=>setting('currency','₴');
 const rateUnit=()=>setting('rateUnit','m');
@@ -288,15 +289,15 @@ const rateNum=a=>rateUnit()==='m'?Math.round(a/12*100)/100:a;
 const rateShow=a=>a>0?(rateUnit()==='m'?rateNum(a)+'%/мес':rateNum(a)+'% год.'):'';
 const money=(n,sign)=>{n=num(n);const a=Math.abs(n),s=(a>=100?nf0:nf).format(a);return (n<0?'−':sign&&n>0?'+':'')+s+' '+cur()};
 const short=n=>{const a=Math.abs(n);if(a>=1e6)return (n/1e6).toFixed(a>=1e7?0:1).replace('.0','')+'M';if(a>=1e3)return (n/1e3).toFixed(a>=1e4?0:1).replace('.0','')+'k';return String(Math.round(n))};
-const dtf=new Intl.DateTimeFormat('ru-RU',{weekday:'short',day:'numeric',month:'long'});
-const dtfFull=new Intl.DateTimeFormat('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-const mtf=new Intl.DateTimeFormat('ru-RU',{month:'long',year:'numeric'});
-const monthName=d=>mtf.format(d).replace(' г.','');
-const wd=new Intl.DateTimeFormat('ru-RU',{weekday:'short'});
-const mshort=new Intl.DateTimeFormat('ru-RU',{month:'short'});
-const dayLabel=s=>{const t=today();return s===t?'Сегодня':s===addDays(t,-1)?'Вчера':s===addDays(t,1)?'Завтра':dtf.format(pd(s))};
+const dtf=lazyF(Intl.DateTimeFormat,{weekday:'short',day:'numeric',month:'long'});
+const dtfFull=lazyF(Intl.DateTimeFormat,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const mtf=lazyF(Intl.DateTimeFormat,{month:'long',year:'numeric'});
+const monthName=d=>mtf.format(d).replace(/\s?(г|р)\.$/,'');
+const wd=lazyF(Intl.DateTimeFormat,{weekday:'short'});
+const mshort=lazyF(Intl.DateTimeFormat,{month:'short'});
+const dayLabel=s=>{const t=today();return s===t?T('Сегодня'):s===addDays(t,-1)?T('Вчера'):s===addDays(t,1)?T('Завтра'):dtf.format(pd(s))};
 const etaLabel=m=>{const d=new Date();d.setMonth(d.getMonth()+m);return monthName(d)};
-const durLabel=m=>{const y=Math.floor(m/12),r=m%12;return (y?y+' '+plural(y,['год','года','лет'])+' ':'')+(r?r+' мес.':'')||'0 мес.'};
+const durLabel=m=>{const y=Math.floor(m/12),r=m%12;return (y?y+' '+PLT(y,['год','года','лет'])+' ':'')+(r?r+' мес.':'')||'0 мес.'};
 const monthsUntil=s=>{const a=new Date(),b=pd(s);return Math.max(1,(b.getFullYear()-a.getFullYear())*12+b.getMonth()-a.getMonth()+(b.getDate()>=a.getDate()?0:-1))};
 let toastT;function toast(t){$$('.toast').forEach(x=>x.remove());const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);clearTimeout(toastT);toastT=setTimeout(()=>e.remove(),2200)}
 
@@ -451,7 +452,495 @@ const DICT={
  'Убрать демо-данные':['Прибрати демодані','Remove demo data'],'Очистить локальные данные':['Очистити локальні дані','Clear local data']
 };
 const T=s=>{const l=getLang();if(l==='ru')return s;const e=DICT[s];return (e&&e[l==='ua'?0:1])||s};
+Object.assign(DICT,{
+ 'Отмена':['Скасувати','Cancel'],'Готово':['Готово','Done'],'Удалить':['Видалити','Delete'],'Вчера':['Вчора','Yesterday'],'Завтра':['Завтра','Tomorrow'],
+ 'Перевод':['Переказ','Transfer'],'Платёж по карте: ':['Платіж за карткою: ','Card payment: '],'Возврат долга: ':['Повернення боргу: ','Debt repaid: '],'Платёж: ':['Платіж: ','Payment: '],'долг':['борг','debt'],
+ 'Корректировка баланса':['Коригування балансу','Balance adjustment'],'Доход':['Дохід','Income'],'Расход':['Витрата','Expense'],'Без счёта':['Без рахунку','No account'],
+ /* встроенные категории (внутри хранится русское название) */
+ 'Продукты':['Продукти','Groceries'],'Кафе и рестораны':['Кафе та ресторани','Cafes & restaurants'],'Транспорт':['Транспорт','Transport'],'Коммунальные услуги':['Комунальні послуги','Utilities'],
+ 'Аренда жилья':['Оренда житла','Rent'],'Подписки и связь':['Підписки та зв’язок','Subscriptions & phone'],'Здоровье':['Здоров’я','Health'],'Красота и уход':['Краса та догляд','Beauty & care'],
+ 'Одежда и обувь':['Одяг та взуття','Clothes & shoes'],'Дом и быт':['Дім і побут','Home & household'],'Образование':['Освіта','Education'],'Дети':['Діти','Kids'],'Досуг':['Дозвілля','Leisure'],
+ 'Подарки':['Подарунки','Gifts'],'Путешествия':['Подорожі','Travel'],'Домашние животные':['Домашні тварини','Pets'],'Бизнес и реклама':['Бізнес і реклама','Business & ads'],
+ 'Комиссии банков':['Комісії банків','Bank fees'],'Благотворительность':['Благодійність','Charity'],'Прочее':['Інше','Other'],
+ 'Зарплата':['Зарплата','Salary'],'Бизнес и проекты':['Бізнес і проєкти','Business & projects'],'Фриланс и подработка':['Фриланс і підробіток','Freelance & side jobs'],'Премии и бонусы':['Премії та бонуси','Bonuses'],
+ 'Кэшбек':['Кешбек','Cashback'],'Денежные подарки':['Грошові подарунки','Money gifts'],'Продажа вещей':['Продаж речей','Items sold'],'Доход от аренды':['Дохід від оренди','Rental income'],
+ 'Проценты и дивиденды':['Відсотки та дивіденди','Interest & dividends'],'Возврат':['Повернення','Refund'],
+ /* экран «Сегодня» */
+ 'перерасход':['перевитрата','overspent'],'осталось':['залишилось','left'],'потрачено':['витрачено','spent'],
+ 'Базовый лимит на день':['Базовий ліміт на день','Base daily limit'],'Доступно сегодня (с переносом)':['Доступно сьогодні (з переносом)','Available today (with carry-over)'],'Потрачено в лимите':['Витрачено в ліміті','Spent within the limit'],
+ 'Составьте план месяца или задайте дневной лимит — приложение покажет, сколько можно потратить сегодня.':['Складіть план місяця або задайте денний ліміт — застосунок покаже, скільки можна витратити сьогодні.','Make a monthly plan or set a daily limit — the app will show how much you can spend today.'],
+ 'Задать лимит':['Задати ліміт','Set a limit'],
+ 'Лимит исчерпан: перерасход %1 уменьшит доступную сумму следующих дней.':['Ліміт вичерпано: перевитрата %1 зменшить доступну суму наступних днів.','Limit used up: the overspend of %1 will reduce the amount available on the following days.'],
+ 'Можно потратить ещё %1. Неиспользованный лимит переносится на следующий день.':['Можна витратити ще %1. Невикористаний ліміт переноситься на наступний день.','You can spend %1 more. Unused limit carries over to the next day.'],
+ 'План превышает доходы на %1.':['План перевищує доходи на %1.','The plan exceeds income by %1.'],
+ 'Свободно меньше 20% дохода — дневного бюджета может не хватить.':['Вільно менше 20% доходу — денного бюджету може не вистачити.','Less than 20% of income is free — the daily budget may not be enough.'],
+ 'План и факт по расходам':['План і факт за витратами','Plan vs actual spending'],'План месяца':['План місяця','Monthly plan'],
+ 'свободно %1 · лимит %2/день':['вільно %1 · ліміт %2/день','%1 free · limit %2/day'],'доходы, платежи и накопления → дневной бюджет':['доходи, платежі та накопичення → денний бюджет','income, payments and savings → daily budget'],
+ 'Доходы':['Доходи','Income'],'Расходы':['Витрати','Expenses'],'в лимите %1':['у ліміті %1','within limit %1'],'в лимите %1 из %2':['у ліміті %1 із %2','within limit %1 of %2'],
+ 'Ближайшие платежи':['Найближчі платежі','Upcoming payments'],'Операции':['Операції','Transactions'],'Календарь':['Календар','Calendar'],'Все ›':['Усі ›','All ›'],
+ 'Операций нет. Нажмите «+», чтобы добавить.':['Операцій немає. Натисніть «+», щоб додати.','No transactions. Tap “+” to add one.'],
+ 'сегодня':['сьогодні','today'],'завтра':['завтра','tomorrow'],'через %1 %2':['через %1 %2','in %1 %2'],'день|дня|дней':['день|дні|днів','day|days'],
+ '%1: план превышен на %2 (%3 из %4)':['%1: план перевищено на %2 (%3 із %4)','%1: over plan by %2 (%3 of %4)'],'%1: %2% плана (%3 из %4)':['%1: %2% плану (%3 із %4)','%1: %2% of plan (%3 of %4)'],
+ '%1: план превышен на %2':['%1: план перевищено на %2','%1: over plan by %2'],'%1: израсходовано %2% плана':['%1: витрачено %2% плану','%1: %2% of plan used'],
+ 'цена?':['ціна?','price?'],'Нажатие записывает трату, удержание 2 секунды меняет цену.':['Натискання записує витрату, утримання 2 секунди змінює ціну.','Tap records an expense; hold for 2 seconds to change the price.'],
+ 'Нажмите ＋ и создайте кнопку для частой траты, например «Кофе».':['Натисніть ＋ і створіть кнопку для частої витрати, наприклад «Кава».','Tap ＋ to create a button for a frequent expense, e.g. “Coffee”.'],
+ 'Отменить':['Скасувати','Undo'],
+ /* добавление операции */
+ 'Долг':['Борг','Debt'],'Поиск или своя категория':['Пошук або власна категорія','Search or add your own category'],
+ 'Счёт':['Рахунок','Account'],'На счёт':['На рахунок','To account'],'Со счёта':['З рахунку','From account'],'Получено':['Отримано','Received'],'по курсу':['за курсом','at the rate'],'Получено, ':['Отримано, ','Received, '],
+ 'Дата':['Дата','Date'],'Заметка':['Нотатка','Note'],'Необязательно':['Необов’язково','Optional'],'Удалить операцию':['Видалити операцію','Delete transaction'],'Операция':['Операція','Transaction'],'Новая операция':['Нова операція','New transaction'],
+ 'Добавить':['Додати','Add'],'— без счёта —':['— без рахунку —','— no account —'],'— выберите —':['— оберіть —','— select —'],'нет долгов':['немає боргів','no debts'],
+ '＋ Создать «%1»':['＋ Створити «%1»','＋ Create “%1”'],'Удалить эту операцию?':['Видалити цю операцію?','Delete this transaction?'],
+ 'Выберите два разных счёта':['Оберіть два різні рахунки','Choose two different accounts'],'Сначала добавьте долг в разделе «Долги»':['Спочатку додайте борг у розділі «Борги»','First add a debt in the “Debts” section'],
+ 'Выберите счёт, с которого платите':['Оберіть рахунок, з якого платите','Choose the account you pay from'],'Выберите другой счёт — не саму карту':['Оберіть інший рахунок — не саму картку','Choose a different account — not the card itself'],
+ 'Платёж по долгу — со счёта в основной валюте':['Платіж за боргом — з рахунку в основній валюті','Debt payments must come from an account in the main currency'],
+ 'Сохранено':['Збережено','Saved'],'Добавлено':['Додано','Added'],'Добавлено · %1':['Додано · %1','Added · %1']
+});
+const TT=(s,...a)=>{let r=T(s);a.forEach((v,i)=>{r=r.split('%'+(i+1)).join(v)});return r};
+const cn=n=>T(n);
+const PLT=(n,ruForms)=>{const l=getLang();if(l==='ru')return plural(n,ruForms);const e=DICT[ruForms.join('|')];if(!e)return plural(n,ruForms);
+ const f=(e[l==='ua'?0:1]||'').split('|');return l==='ua'?plural(n,f):(Math.abs(n)===1?f[0]:f[1])};
 
+
+Object.assign(DICT,{'год|года|лет':['рік|роки|років','year|years'],'%1 из %2':['%1 з %2','%1 of %2'],'операция|операции|операций':['операція|операції|операцій','transaction|transactions']});
+const PH={
+'После платежей по долгам:':['Після платежів за боргами:','After debt payments:'],
+'лимит':['ліміт','limit'],'Лимит':['Ліміт','Limit'],'до':['до','by'],
+'Гид по приложению':['Гід по застосунку','App guide'],
+'Синхронизация':['Синхронізація','Sync'],
+'Добавить операцию':['Додати операцію','Add transaction'],
+'Не удалось сохранить локально':['Не вдалося зберегти локально','Couldn’t save locally'],
+'Дебетовая карта':['Дебетова картка','Debit card'],
+'Кредитная карта':['Кредитна картка','Credit card'],
+'Наличные':['Готівка','Cash'],
+'Накопительный счёт':['Накопичувальний рахунок','Savings account'],
+'Накопительный':['Накопичувальний','Savings'],
+'Нажмите на столбец, чтобы увидеть значение':['Натисніть на стовпець, щоб побачити значення','Tap a bar to see the value'],
+'Нажмите на график, чтобы увидеть значение':['Натисніть на графік, щоб побачити значення','Tap the chart to see the value'],
+'Остальное':['Решта','Other'],
+'план превышен на %2':['план перевищено на %2','plan exceeded by %2'],
+'израсходовано %2% плана':['витрачено %2% плану','%2% of plan used'],
+'план превышен на %2 (%3 из %4)':['план перевищено на %2 (%3 з %4)','plan exceeded by %2 (%3 of %4)'],
+'плана (%3 из %4)':['плану (%3 з %4)','of plan (%3 of %4)'],
+'Сколько траты уходит в дневной лимит: вне плана — вся сумма; по категории плана — только часть сверх плана (в день, когда порог пройден)':['Скільки витрати йде в денний ліміт: поза планом — вся сума; за категорією плану — лише частина понад план (в день, коли поріг пройдено)','How much of a purchase counts against the daily limit: outside the plan — the full amount; in a plan category — only the part above the plan (on the day the threshold is crossed)'],
+'Платёж по карте':['Платіж за карткою','Card payment'],
+'Возврат долга':['Повернення боргу','Debt repayment'],
+'Платёж':['Платіж','Payment'],
+'Назад':['Назад','Back'],
+'Вперёд':['Вперед','Forward'],
+'Все':['Усі','All'],
+'Кредитная':['Кредитна','Credit'],
+'Долг по карте':['Борг за карткою','Card debt'],
+'Доступно':['Доступно','Available'],
+'Расходы за месяц':['Витрати за місяць','Monthly spending'],
+'платёж':['платіж','payment'],
+'Накоплено':['Накопичено','Saved'],
+'Баланс':['Баланс','Balance'],
+'На счетах':['На рахунках','In accounts'],
+'Долг по картам':['Борг за картками','Card debt'],
+'Доступно по кредитным лимитам':['Доступно за кредитними лімітами','Available on credit limits'],
+'Карты и счета':['Картки та рахунки','Cards & accounts'],
+'Добавьте первую карту или счёт':['Додайте першу картку або рахунок','Add your first card or account'],
+'Добавить счёт':['Додати рахунок','Add account'],
+'Погашен':['Погашено','Paid off'],
+'выплачено':['виплачено','paid'],
+'Я должен':['Я винен','I owe'],
+'Мне должны':['Мені винні','Owed to me'],
+'Платежей в месяц (мин.)':['Платежів на місяць (мін.)','Payments per month (min.)'],
+'Чистый капитал':['Чистий капітал','Net worth'],
+'Долгов нет':['Боргів немає','No debts'],
+'Нажмите «Добавить», чтобы записать кредит или займ':['Натисніть «Додати», щоб записати кредит або позику','Tap “Add” to record a loan or borrowing'],
+'Кредитные карты (из раздела «Счета»)':['Кредитні картки (з розділу «Рахунки»)','Credit cards (from “Accounts”)'],
+'ставка не указана':['ставку не вказано','rate not set'],
+'мин.':['мін.','min.'],
+'Цели: расчёты':['Цілі: розрахунки','Goals: calculations'],
+'Лавина':['Лавина','Avalanche'],
+'Сначала долг с самой высокой ставкой — минимум переплаты':['Спочатку борг із найвищою ставкою — мінімум переплати','Highest rate first — least interest paid'],
+'Снежный ком':['Сніжний ком','Snowball'],
+'Сначала самый маленький долг — быстрые победы и мотивация':['Спочатку найменший борг — швидкі перемоги й мотивація','Smallest debt first — quick wins and motivation'],
+'Только минимум':['Лише мінімум','Minimum only'],
+'Базовый сценарий: платите ровно минимальные платежи':['Базовий сценарій: платите рівно мінімальні платежі','Baseline: pay exactly the minimum payments'],
+'Осталось накопить':['Залишилось накопичити','Left to save'],
+'Ваши взносы / мес':['Ваші внески / міс','Your contributions / mo'],
+'Нужно / мес для сроков':['Потрібно / міс для строків','Needed / mo for deadline'],
+'Мои цели':['Мої цілі','My goals'],
+'нужно':['потрібно','needed'],
+'Поставьте цель: накопить на что-то или закрыть долги.':['Поставте ціль: накопичити на щось або закрити борги.','Set a goal: save for something or pay off debts.'],
+'Приложение рассчитает сроки и стратегии.':['Застосунок розрахує строки та стратегії.','The app will calculate timelines and strategies.'],
+'Создать цель':['Створити ціль','Create goal'],
+'Цель достигнута':['Ціль досягнуто','Goal reached'],
+'Осталось':['Залишилось','Left'],
+'срок':['строк','deadline'],
+'Привязан счёт':['Прив’язаний рахунок','Linked account'],
+'Пополнить':['Поповнити','Top up'],
+'Изменить':['Змінити','Edit'],
+'Симулятор взноса':['Симулятор внеску','Contribution simulator'],
+'Взнос в месяц':['Внесок на місяць','Monthly contribution'],
+'Сохранить как мой план':['Зберегти як мій план','Save as my plan'],
+'Варианты стратегии':['Варіанти стратегії','Strategy options'],
+'Где взять деньги (сокращение на 15%)':['Де взяти гроші (скорочення на 15%)','Where to find the money (15% cut)'],
+'сейчас':['зараз','now'],
+'мес. быстрее':['міс. швидше','mo. sooner'],
+'Спокойный':['Спокійний','Relaxed'],
+'Базовый':['Базовий','Base'],
+'Ускоренный':['Прискорений','Accelerated'],
+'Максимальный':['Максимальний','Maximum'],
+'К сроку':['До строку','By deadline'],
+'чтобы успеть к':['щоб встигнути до','to make it by'],
+'Текущий темп':['Поточний темп','Current pace'],
+'ваш средний остаток за месяц':['ваш середній залишок за місяць','your average monthly surplus'],
+'Мой план':['Мій план','My plan'],
+'проценты':['відсотки','interest'],
+'не достигнуть':['не досягти','not reachable'],
+'успеваете':['встигаєте','on track'],
+'не успеваете':['не встигаєте','behind'],
+'Цель будет достигнута':['Ціль буде досягнуто','Goal will be reached'],
+'через':['через','in'],
+'в день':['на день','per day'],
+'успеваете к сроку':['встигаєте до строку','on track for the deadline'],
+'с запасом':['із запасом','with a margin of'],
+'опоздание на':['запізнення на','late by'],
+'При таком взносе цель не достигается в ближайшие 50 лет':['За такого внеску ціль не досягається найближчі 50 років','With this contribution the goal isn’t reached in the next 50 years'],
+'Накопления':['Накопичення','Savings'],
+'Все выбранные долги погашены':['Усі вибрані борги погашено','All selected debts are paid off'],
+'Изменить цель':['Змінити ціль','Edit goal'],
+'Выплачено':['Виплачено','Paid'],
+'мин. платежи':['мін. платежі','min. payments'],
+'Бюджет на погашение':['Бюджет на погашення','Repayment budget'],
+'Чтобы закрыть всё к':['Щоб закрити все до','To pay everything off by'],
+'в месяц':['на місяць','per month'],
+'Выставить':['Виставити','Set'],
+'доплата':['доплата','extra'],
+'не погашается':['не погашається','never paid off'],
+'Результат':['Результат','Result'],
+'Долги не гасятся: платежи меньше начисляемых процентов. Увеличьте бюджет или укажите минимальные платежи.':['Борги не гасяться: платежі менші за нараховані відсотки. Збільште бюджет або вкажіть мінімальні платежі.','Debts aren’t being paid down: payments are below the accrued interest. Increase the budget or enter minimum payments.'],
+'Свобода от долгов':['Свобода від боргів','Debt freedom'],
+'переплата по процентам':['переплата за відсотками','interest overpayment'],
+'при минимальных платежах долги не гасятся':['за мінімальних платежів борги не гасяться','with minimum payments the debts are never paid off'],
+'экономия':['економія','savings'],
+'против минимума':['проти мінімуму','vs minimum'],
+'План на этот месяц':['План на цей місяць','Plan for this month'],
+'остаток':['залишок','balance'],
+'Порядок закрытия':['Порядок закриття','Payoff order'],
+'Остаток долга по месяцам':['Залишок боргу за місяцями','Debt balance by month'],
+'Сравнение стратегий. Нажмите на график.':['Порівняння стратегій. Натисніть на графік.','Strategy comparison. Tap the chart.'],
+'График погашения':['Графік погашення','Repayment schedule'],
+'Скачать':['Завантажити','Download'],
+'месяц':['місяць','month'],
+'Проценты':['Відсотки','Interest'],
+'Остаток':['Залишок','Balance'],
+'Свернуть':['Згорнути','Collapse'],
+'Показать все':['Показати всі','Show all'],
+'Прогноз: ставки и платежи неизменны, платёж — в конце месяца после начисления процентов, новые покупки и комиссии не учтены.':['Прогноз: ставки й платежі незмінні, платіж — наприкінці місяця після нарахування відсотків, нові покупки та комісії не враховано.','Forecast: rates and payments stay constant, payment at month end after interest is charged, new purchases and fees not included.'],
+'Что если платить больше':['Що, якщо платити більше','What if you pay more'],
+'Бюджет / мес':['Бюджет / міс','Budget / mo'],
+'переплата':['переплата','overpayment'],
+'Месяц':['Місяць','Month'],
+'Тело долга':['Тіло боргу','Principal'],
+'сравнение с прошлым периодом':['порівняння з минулим періодом','vs previous period'],
+'к':['до','vs'],
+'прошлому месяцу':['минулого місяця','last month'],
+'прошлому году':['минулого року','last year'],
+'Расходы за 7 дней':['Витрати за 7 днів','Spending, last 7 days'],
+'в дневном лимите)':['в денному ліміті)','in the daily limit)'],
+'Расходы по дням':['Витрати за днями','Spending by day'],
+'Нарастающий итог':['Наростаючий підсумок','Running total'],
+'и план по лимиту':['і план за лімітом','and plan by limit'],
+'Факт':['Факт','Actual'],
+'План (лимит':['План (ліміт','Plan (limit'],
+'дни)':['дні)','days)'],
+'Доходы и расходы по месяцам':['Доходи та витрати за місяцями','Income & spending by month'],
+'Накопленный результат за год':['Накопичений результат за рік','Cumulative result for the year'],
+'расходы':['витрати','spending'],
+'День':['День','Day'],
+'Год':['Рік','Year'],
+'Результат (доход':['Результат (дохід','Result (income'],
+'расход)':['витрати)','spending)'],
+'норма сбережений':['норма заощаджень','savings rate'],
+'Платежи по долгам':['Платежі за боргами','Debt payments'],
+'в накопления':['у накопичення','to savings'],
+'Остаток на начало':['Залишок на початок','Opening balance'],
+'все счета, за вычетом долга по картам':['усі рахунки, за вирахуванням боргу за картками','all accounts, minus card debt'],
+'Остаток на конец':['Залишок на кінець','Closing balance'],
+'Расходы по категориям':['Витрати за категоріями','Spending by category'],
+'Нет расходов за период':['Немає витрат за період','No spending in this period'],
+'Доходы по источникам':['Доходи за джерелами','Income by source'],
+'Расходы по счетам':['Витрати за рахунками','Spending by account'],
+'Самые крупные траты':['Найбільші витрати','Largest expenses'],
+'Операции дня':['Операції дня','Transactions of the day'],
+'расходы и доходы по дням':['витрати й доходи за днями','spending and income by day'],
+'Ошибка отображения':['Помилка відображення','Display error'],
+'без счёта':['без рахунку','no account'],
+'Создать «%1»':['Створити «%1»','Create “%1”'],
+'выберите':['виберіть','select'],
+'Всё время':['Весь час','All time'],
+'Этот месяц':['Цей місяць','This month'],
+'Прошлый месяц':['Минулий місяць','Last month'],
+'Этот год':['Цей рік','This year'],
+'Выбранный период':['Вибраний період','Selected period'],
+'Поиск: название, заметка, сумма':['Пошук: назва, нотатка, сума','Search: name, note, amount'],
+'Все счета':['Усі рахунки','All accounts'],
+'Категория':['Категорія','Category'],
+'Все категории':['Усі категорії','All categories'],
+'Период':['Період','Period'],
+'доходы':['доходи','income'],
+'Ничего не найдено':['Нічого не знайдено','Nothing found'],
+'Показать ещё':['Показати ще','Show more'],
+'Пн':['Пн','Mon'],
+'Вт':['Вт','Tue'],
+'Ср':['Ср','Wed'],
+'Чт':['Чт','Thu'],
+'Пт':['Пт','Fri'],
+'Сб':['Сб','Sat'],
+'Вс':['Нд','Sun'],
+'В этот день операций нет':['У цей день операцій немає','No transactions on this day'],
+'Добавить операцию на этот день':['Додати операцію на цей день','Add a transaction for this day'],
+'Включённые категории показываются при добавлении операции. Скрытые остаются в старых операциях, плане и статистике, их можно найти поиском в списке категорий.':['Увімкнені категорії показуються під час додавання операції. Приховані лишаються в старих операціях, плані та статистиці, їх можна знайти пошуком у списку категорій.','Enabled categories appear when adding a transaction. Hidden ones stay in past transactions, the plan and statistics, and can be found via search in the category list.'],
+'Основной доход':['Основний дохід','Main income'],
+'Источник дохода':['Джерело доходу','Income source'],
+'Запланированные расходы':['Заплановані витрати','Planned expenses'],
+'Платежи по долгам и кредитам':['Платежі за боргами та кредитами','Debt & loan payments'],
+'Долг или карта':['Борг або картка','Debt or card'],
+'Цель или счёт':['Ціль або рахунок','Goal or account'],
+'Добавить категорию из списка':['Додати категорію зі списку','Add a category from the list'],
+'Добавить строку':['Додати рядок','Add row'],
+'Свободные средства':['Вільні кошти','Free funds'],
+'Бюджет на день':['Бюджет на день','Daily budget'],
+'дн. · свободно':['дн. · вільно','d · free'],
+'дохода · доходы':['доходу · доходи','of income · income'],
+'план':['план','plan'],
+'Долги: сейчас':['Борги: зараз','Debts: now'],
+'после плановых платежей':['після планових платежів','after planned payments'],
+'План превышает доходы на':['План перевищує доходи на','The plan exceeds income by'],
+'Свободно меньше 20% дохода':['Вільно менше 20% доходу','Less than 20% of income is free'],
+'План':['План','Plan'],
+'Траты в рамках плана категории не уменьшают дневной лимит. Всё, что сверх плана категории, и все траты вне плана расходуют дневной бюджет того дня, когда потрачено.':['Витрати в межах плану категорії не зменшують денний ліміт. Усе, що понад план категорії, і всі витрати поза планом витрачають денний бюджет того дня, коли витрачено.','Spending within a category’s plan doesn’t reduce the daily limit. Anything above the category plan, and all spending outside the plan, uses up that day’s budget.'],
+'Из прошлого месяца':['З минулого місяця','From last month'],
+'Платежи из «Долгов»':['Платежі з «Боргів»','Payments from “Debts”'],
+'Удалить план':['Видалити план','Delete plan'],
+'За прошлый месяц плана нет':['За минулий місяць плану немає','No plan for last month'],
+'Нет долгов с минимальным платежом':['Немає боргів із мінімальним платежем','No debts with a minimum payment'],
+'Удалить план этого месяца?':['Видалити план цього місяця?','Delete this month’s plan?'],
+'План сохранён':['План збережено','Plan saved'],
+'Свой цвет':['Власний колір','Custom color'],
+'Ставка, %':['Ставка, %','Rate, %'],
+'в год':['на рік','per year'],
+'Название':['Назва','Name'],
+'Например':['Наприклад','For example'],
+'Тип':['Тип','Type'],
+'Основная':['Основна','Main'],
+'Последние 4 цифры':['Останні 4 цифри','Last 4 digits'],
+'Использовано из лимита':['Використано з ліміту','Used of limit'],
+'Текущий баланс':['Поточний баланс','Current balance'],
+'Кредитный лимит':['Кредитний ліміт','Credit limit'],
+'Мин. платёж в месяц':['Мін. платіж на місяць','Min. payment per month'],
+'День платежа (1–31)':['День платежу (1–31)','Payment day (1–31)'],
+'Изменение баланса создаёт корректировку, она не попадает в доходы и расходы.':['Зміна балансу створює коригування, воно не потрапляє в доходи та витрати.','Changing the balance creates an adjustment; it isn’t counted in income or spending.'],
+'История операций':['Історія операцій','Transaction history'],
+'Операций пока нет':['Операцій поки немає','No transactions yet'],
+'Вся история':['Уся історія','Full history'],
+'Внести платёж по карте':['Внести платіж за карткою','Make a card payment'],
+'Удалить счёт':['Видалити рахунок','Delete account'],
+'Новый счёт':['Новий рахунок','New account'],
+'Операции останутся в истории.':['Операції залишаться в історії.','Transactions will stay in history.'],
+'Ручная корректировка':['Ручне коригування','Manual adjustment'],
+'Кредит, займ, имя':['Кредит, позика, ім’я','Loan, borrowing, name'],
+'Сумма изначально':['Сума спочатку','Initial amount'],
+'Остаток сейчас':['Залишок зараз','Balance now'],
+'Платёж в месяц':['Платіж на місяць','Payment per month'],
+'Принять возврат':['Прийняти повернення','Receive repayment'],
+'Внести платёж':['Внести платіж','Make a payment'],
+'История платежей':['Історія платежів','Payment history'],
+'Платежей пока нет':['Платежів поки немає','No payments yet'],
+'Новый долг':['Новий борг','New debt'],
+'Накопить':['Накопичити','Save up'],
+'Закрыть долги':['Закрити борги','Pay off debts'],
+'Отпуск, подушка, закрыть кредиты':['Відпустка, подушка, закрити кредити','Vacation, cushion, pay off loans'],
+'Сумма цели':['Сума цілі','Goal amount'],
+'Привязать счёт':['Прив’язати рахунок','Link account'],
+'вести вручную':['вести вручну','track manually'],
+'Уже накоплено':['Уже накопичено','Already saved'],
+'Доходность, % год.':['Дохідність, % річних','Yield, % per year'],
+'Исходная сумма долгов':['Початкова сума боргів','Initial debt amount'],
+'авто':['авто','auto'],
+'Желаемая дата':['Бажана дата','Target date'],
+'Срок, мес. (вместо даты)':['Строк, міс. (замість дати)','Term, months (instead of date)'],
+'Какие долги включить':['Які борги включити','Which debts to include'],
+'Нет активных долгов. Добавьте их в разделе «Долги» или кредитные карты в «Счетах».':['Немає активних боргів. Додайте їх у розділі «Борги» або кредитні картки в «Рахунках».','No active debts. Add them under “Debts”, or credit cards under “Accounts”.'],
+'Удалить цель':['Видалити ціль','Delete goal'],
+'Цель':['Ціль','Goal'],
+'Новая цель':['Нова ціль','New goal'],
+'Создать':['Створити','Create'],
+'Бюджет на долги в месяц':['Бюджет на борги на місяць','Monthly debt budget'],
+'Выберите хотя бы один долг':['Виберіть хоча б один борг','Select at least one debt'],
+'Пополнить цель':['Поповнити ціль','Top up goal'],
+'Деньги будут переведены на':['Гроші буде переказано на','The money will be transferred to'],
+'Сумма добавится к накопленному по цели.':['Сума додасться до накопиченого за ціллю.','The amount will be added to the goal’s savings.'],
+'Выберите счёт':['Виберіть рахунок','Select an account'],
+'Взнос':['Внесок','Contribution'],
+'Цель пополнена':['Ціль поповнено','Goal topped up'],
+'Добавить быструю трату':['Додати швидку витрату','Add quick expense'],
+'Нажмите':['Натисніть','Tap'],
+'и создайте кнопку для частой траты, например «Кофе».':['і створіть кнопку для частої витрати, наприклад «Кава».','and create a button for a frequent expense, e.g. “Coffee”.'],
+'Новая цена для кнопки':['Нова ціна для кнопки','New price for the button'],
+'Уже записанные операции не меняются.':['Уже записані операції не змінюються.','Existing transactions don’t change.'],
+'Цена обновлена':['Ціну оновлено','Price updated'],
+'Не больше 12 кнопок':['Не більше 12 кнопок','No more than 12 buttons'],
+'Например, Кофе':['Наприклад, Кава','E.g. Coffee'],
+'последний использованный':['останній використаний','last used'],
+'Цена':['Ціна','Price'],
+'Часто повторяются':['Часто повторюються','Frequently repeated'],
+'Удалить кнопку':['Видалити кнопку','Delete button'],
+'Быстрая трата':['Швидка витрата','Quick expense'],
+'Новая быстрая трата':['Нова швидка витрата','New quick expense'],
+'Записанные траты останутся.':['Записані витрати залишаться.','Recorded expenses will stay.'],
+'Кнопка добавлена':['Кнопку додано','Button added'],
+'свайп влево на операции: появляется «Удалить»':['свайп вліво на операції: з’являється «Видалити»','swipe left on a transaction: “Delete” appears'],
+'Операция удалена':['Операцію видалено','Transaction deleted'],
+'счёт':['рахунок','account'],
+'Вернуть':['Повернути','Restore'],
+'Корзина пуста':['Кошик порожній','Trash is empty'],
+'Удалённое хранится 30 дней. Нажмите на запись, чтобы вернуть её.':['Видалене зберігається 30 днів. Натисніть на запис, щоб повернути його.','Deleted items are kept for 30 days. Tap an item to restore it.'],
+'Возвращено':['Повернено','Restored'],
+'Забыли':['Забули','Forgot'],
+'Неверный':['Невірний','Wrong'],
+'Введите':['Введіть','Enter'],
+'Сбросить':['Скинути','Reset'],
+'Данные в этом браузере будут стёрты и снова подтянутся из':['Дані в цьому браузері буде стерто й знову підтягнуться з','Data in this browser will be erased and pulled again from'],
+'Таблицы.':['Таблиці.','the Sheet.'],
+'Подключения к таблице нет, поэтому данные на этом устройстве будут потеряны.':['Підключення до таблиці немає, тому дані на цьому пристрої буде втрачено.','There’s no spreadsheet connection, so data on this device will be lost.'],
+'Подождите':['Зачекайте','Wait'],
+'Слишком много попыток: подождите 30 с':['Забагато спроб: зачекайте 30 с','Too many attempts: wait 30 s'],
+'Новый':['Новий','New'],
+'Придумайте 4 цифры':['Придумайте 4 цифри','Choose 4 digits'],
+'Повторите':['Повторіть','Repeat'],
+'Ещё раз те же 4 цифры':['Ще раз ті самі 4 цифри','The same 4 digits again'],
+'не совпал':['не збігся','didn’t match'],
+'Текущий':['Поточний','Current'],
+'Подтвердите, что это вы':['Підтвердіть, що це ви','Confirm it’s you'],
+'код':['код','code'],
+'Сменить':['Змінити','Change'],
+'Выключить':['Вимкнути','Turn off'],
+'защищает приложение на этом устройстве. Он не хранится в таблице.':['захищає застосунок на цьому пристрої. Він не зберігається в таблиці.','protects the app on this device. It isn’t stored in the sheet.'],
+'изменён':['змінено','changed'],
+'Как подключить таблицу':['Як підключити таблицю','How to connect a sheet'],
+'Создайте пустую':['Створіть порожню','Create an empty'],
+'Таблицу.':['Таблицю.','Sheet.'],
+'Расширения':['Розширення','Extensions'],
+'вставьте код из файла':['вставте код із файлу','paste the code from the file'],
+'задайте свой':['задайте свій','set your own'],
+'Развернуть → Новое развёртывание → Веб-приложение. Выполнять от имени':['Розгорнути → Нове розгортання → Веб-застосунок. Виконувати від імені','Deploy → New deployment → Web app. Execute as'],
+'Я':['Я','Me'],
+'доступ':['доступ','access'],
+'Скопируйте':['Скопіюйте','Copy the'],
+'сюда и укажите тот же токен.':['сюди й вкажіть той самий токен.','here and enter the same token.'],
+'Экспорт в':['Експорт у','Export to'],
+'Импорт из':['Імпорт із','Import from'],
+'Сначала подключите таблицу':['Спочатку підключіть таблицю','Connect a spreadsheet first'],
+'Бот ещё не настроен администратором':['Бот ще не налаштований адміністратором','The bot isn’t set up by the admin yet'],
+'Ссылка принята. Нажмите «Проверить и синхронизировать»':['Посилання прийнято. Натисніть «Перевірити та синхронізувати»','Link accepted. Tap “Check & sync”'],
+'Укажите':['Вкажіть','Enter'],
+'Проверяю':['Перевіряю','Checking'],
+'Соединение установлено. Синхронизирую':['З’єднання встановлено. Синхронізую','Connected. Syncing'],
+'Готово: данные синхронизированы':['Готово: дані синхронізовано','Done: data synced'],
+'Ошибка':['Помилка','Error'],
+'Импорт заменит записи с совпадающими':['Імпорт замінить записи зі збіжними','Import will replace records with matching'],
+'Продолжить?':['Продовжити?','Continue?'],
+'Импортировать':['Імпортувати','Import'],
+'Импортировано':['Імпортовано','Imported'],
+'Не удалось прочитать файл':['Не вдалося прочитати файл','Couldn’t read the file'],
+'Демо-данные загружены':['Демодані завантажено','Demo data loaded'],
+'Демо-данные удалены':['Демодані видалено','Demo data removed'],
+'Удалить ВСЕ локальные данные в этом браузере? Данные в':['Видалити ВСІ локальні дані в цьому браузері? Дані в','Delete ALL local data in this browser? Data in the'],
+'Таблице останутся и подтянутся при синхронизации.':['Таблиці залишаться й підтягнуться під час синхронізації.','Sheet will remain and be pulled in on sync.'],
+'Очистить':['Очистити','Clear'],
+'Не указан':['Не вказано','Not set'],
+'Скрипт вернул не':['Скрипт повернув не','The script returned non-'],
+'проверьте доступ «Все» и':['перевірте доступ «Усі» та','check access “Anyone” and'],
+'Скрипт таблицы устарел — обновите':['Скрипт таблиці застарів — оновіть','The sheet script is outdated — update'],
+'Удалить её?':['Видалити її?','Delete it?'],
+'Гид завершён':['Гід завершено','Guide finished'],
+'Пропустить':['Пропустити','Skip'],
+'Закрыть':['Закрити','Close'],
+'Далее':['Далі','Next'],
+'Начать':['Почати','Start'],
+'Подключено':['Підключено','Connected'],
+'Данные будут храниться в вашей таблице':['Дані зберігатимуться у вашій таблиці','Data will be stored in your sheet']
+};
+/* ===== Автоперевод интерфейса (фразы → UA/EN) ===== */
+const CYR=/[А-Яа-яЁё]/,PHC={};
+const PHR=[[/(\d+)\s*мес\./g,['$1 міс.','$1 mo.']],[/\/мес/g,['/міс','/mo']],[/%\s*год\./g,['% річних','% p.a.']],[/до (\d+)-го/g,['до $1-го','by the $1th']],[/(\d+)-(?:е|го)(?![А-Яа-я])/g,['$&','$1']],[/(\d+) дн\./g,['$1 дн.','$1 d']],[/(^|\s)из(?=\s|$)/g,['$1з','$1of']],[/(^|[\s·])мин\.(?=\s)/g,['$1мін.','$1min.']],[/(^|[\s·])до (?=[A-Za-zА-Яа-я])/g,['$1строк: ','$1by ']],[/% к /g,['% до ','% vs ']],[/ дни\)/g,[' дні)',' days)']],[/(^|[\s·])план (?=\d)/g,['$1план ','$1plan ']],[/срок: /g,['строк: ','due ']],[/(^|\s)на (?=\d+ (?:міс|mo))/g,['$1на ','$1']]];
+function phComp(l){if(PHC[l])return PHC[l];const idx=l==='ua'?0:1,m=new Map(),ex=new Map();
+ const lo=s=>s.charAt(0).toLowerCase()+s.slice(1),up=s=>s.charAt(0).toUpperCase()+s.slice(1);
+ const add=(k,v)=>{if(/%\d|%s/.test(k)){return}(k.length<5?ex:m).set(k,v)};
+ for(const src of [DICT,PH])for(const k in src){const v=src[k][idx];if(!v||k.includes('|'))continue;add(k,v);
+  if(k.length>1&&k[1]===k[1].toLowerCase()&&v.length>1&&v[1]===v[1].toLowerCase()){const a=lo(k),b=up(k);if(a!==k&&!(a in src))add(a,lo(v));if(b!==k&&!(b in src))add(b,up(v))}}
+ const keys=[...m.keys()].sort((a,b)=>b.length-a.length).map(k=>k.replace(/[.*+?^${}()|[\]\\\/]/g,'\\$&'));
+ return PHC[l]={m,ex,re:new RegExp('(^|[^А-Яа-яЁё])('+keys.join('|')+')(?![А-Яа-яЁё])','g')}}
+function trS(s,l){if(!CYR.test(s))return s;const R=phComp(l),t=s.trim(),e=R.ex.get(t);if(e)return s.replace(t,e);
+ const t2=t.replace(/^[^А-Яа-яЁёA-Za-z]+/,''),e2=t2!==t&&R.ex.get(t2);if(e2)return s.replace(t2,e2);
+ let r=s;if(r.includes(' · '))r=r.split(' · ').map(p=>{const q=p.trim().replace(/^[^А-Яа-яЁёA-Za-z]+/,'');return R.ex.has(q)?p.replace(q,R.ex.get(q)):p}).join(' · ');
+ r=r.replace(R.re,(x,p,k)=>p+(R.m.get(k)||k));
+ for(const [re,v] of PHR)r=r.replace(re,v[l==='ua'?0:1]);
+ return r}
+const TRM=new WeakMap();
+function trVal(h,key,cur,l){let m=TRM.get(h);const e=m&&m[key];const src=(e&&cur===e.out)?e.src:cur;const out=l==='ru'?src:trS(src,l);
+ if(out!==src){if(!m){m={};TRM.set(h,m)}m[key]={src,out}}else if(m)delete m[key];return out}
+function trAttrs(n,l){for(const a of ['placeholder','aria-label','title'])if(n.hasAttribute(a)){const v=n.getAttribute(a);const m=TRM.get(n);if(CYR.test(v)||(m&&m['a:'+a])){const r=trVal(n,'a:'+a,v,l);if(r!==v)n.setAttribute(a,r)}}}
+function trNode(n,l){if(n.nodeType===3){const p=n.parentNode;if(!p||/^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName))return;const v=n.nodeValue,m=TRM.get(n);if(!CYR.test(v)&&!(m&&m.t))return;const r=trVal(n,'t',v,l);if(r!==v)n.nodeValue=r;return}
+ if(n.nodeType!==1||/^(SCRIPT|STYLE)$/.test(n.nodeName))return;trAttrs(n,l);n.childNodes.forEach(c=>trNode(c,l))}
+let trLang=null;
+let TRO=null,trBusy=false;
+function trStart(){if(TRO||!document.body)return;
+ TRO=new MutationObserver(ms=>{const l=getLang();if(l==='ru'||trBusy)return;trBusy=true;
+  try{for(const m of ms){if(m.type==='childList')m.addedNodes.forEach(n=>trNode(n,l));else if(m.type==='characterData')trNode(m.target,l);else trAttrs(m.target,l)}}finally{trBusy=false;TRO.takeRecords()}});
+ TRO.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']});
+ trLang=getLang();if(trLang!=='ru')trNode(document.body,trLang)}
+const TOURL={
+ua:[
+["Ласкаво просимо до Seyfa","<p>Це особистий облік бюджету. Тут можна вести:</p><ul><li><b>витрати й доходи</b> за днями</li><li><b>картки та кредитні ліміти</b></li><li><b>борги</b> і графіки їх погашення</li><li><b>цілі</b> та накопичення</li><li><b>статистику</b> з діаграмами</li></ul><p>Дані зберігаються у вашому браузері й за бажанням синхронізуються з Google Таблицею. Гід займе близько хвилини.</p>"],
+["П’ять розділів","<p>Навігація внизу:</p><ul><li><b>Сьогодні</b> — денний бюджет і операції</li><li><b>Рахунки</b> — картки та баланс</li><li><b>Борги</b> — кредити й позики</li><li><b>Цілі</b> — накопичення та закриття боргів</li><li><b>Статистика</b> — графіки й підсумки</li></ul>"],
+["Кнопка «+» — нова операція","<p>Доступна на будь-якому екрані. Чотири типи операцій:</p><ul><li><b>Витрата</b></li><li><b>Дохід</b></li><li><b>Переказ</b> між своїми рахунками (платіж на кредитку — теж переказ)</li><li><b>Борг</b> — платіж за кредитом або повернення вам</li></ul><p>Будь-яку операцію можна відкрити, виправити або видалити.</p>"],
+["Вибір дня","<p>Стрілки <b>‹ ›</b> гортають дні.</p><p>Натисніть на дату, щоб обрати будь-який день у календарі та переглянути чи додати операції за нього.</p>"],
+["Денний бюджет","<p>Кільце показує, <b>скільки ще можна витратити сьогодні</b>.</p><p>Невитрачений ліміт переноситься на наступний день, а перевитрата віднімається.</p><p>Колір кільця:</p><ul><li><b>зелений</b> — у нормі</li><li><b>помаранчевий</b> — близько до ліміту</li><li><b>червоний</b> — ліміт перевищено</li></ul>"],
+["Швидкі витрати","<p>Кнопки для частих витрат, наприклад «Кава».</p><ul><li><b>Натискання</b> — записати витрату за збереженою ціною</li><li><b>Утримання 2 секунди</b> — змінити ціну</li><li><b>«＋»</b> — створити свою кнопку</li></ul><p>Одразу після запису можна натиснути «Скасувати».</p>"],
+["План місяця","<p>Впишіть:</p><ul><li>доходи</li><li>обов’язкові витрати</li><li>платежі за боргами</li><li>накопичення</li></ul><p>Застосунок порахує <b>вільні гроші та денний бюджет</b>.</p><p>Витрати в запланованих категоріях ідуть за планом і денний ліміт не зменшують. Без плану діє ліміт із налаштувань.</p>"],
+["Картки та рахунки","<p>Кнопка <b>«Додати»</b> створює картку або рахунок: дебетову, кредитну, готівку, накопичувальний.</p><p>У кредитки вкажіть:</p><ul><li>ліміт</li><li>ставку</li><li>мінімальний платіж</li><li>день платежу</li></ul><p>Застосунок покаже борг, доступний залишок і найближчий платіж.</p>"],
+["Зведення за рахунками","<p>Угорі — гроші на рахунках, загальний борг за кредитками та доступні ліміти.</p><p>Натисніть на картку, щоб:</p><ul><li>змінити дані</li><li><b>скоригувати баланс</b> вручну (це не дохід і не витрата)</li><li>переглянути останні операції</li></ul>"],
+["Борги","<p>Два списки:</p><ul><li><b>«Я винен»</b> — кредити й позики</li><li><b>«Мені винні»</b> — те, що винні вам</li></ul><p>Вкажіть залишок, ставку (на місяць або на рік), платіж і день платежу.</p><p>Кнопка <b>«Внести платіж»</b> у картці боргу зменшує залишок і списує гроші з рахунку.</p>"],
+["Зведення за боргами","<p>Угорі:</p><ul><li>скільки ви винні</li><li>скільки винні вам</li><li>мінімальні платежі на місяць</li><li><b>чистий капітал</b></li></ul><p>Нижче — найближчі платежі на два тижні та прогрес виплат за кожним боргом.</p>"],
+["Цілі","<p>Два види цілей:</p><ul><li><b>«Накопичити»</b> — сума, строк (датою або в місяцях), внесок, дохідність; можна прив’язати накопичувальний рахунок</li><li><b>«Закрити борги»</b> — виберіть борги та бюджет на погашення</li></ul>"],
+["Ціль-накопичення","<p>Відкрийте ціль. Ви побачите:</p><ul><li><b>симулятор внеску</b> зі слайдером</li><li>варіанти стратегії</li><li>джерела грошей для внеску</li></ul><p>«Зберегти як мій план» запам’ятовує вибір.</p>"],
+["Ціль-закриття боргів","<p>Три стратегії:</p><ul><li><b>«Лавина»</b> — спочатку борг із високою ставкою</li><li><b>«Сніжний ком»</b> — спочатку найменший</li><li><b>«Лише мінімум»</b> — базове порівняння</li></ul><p>Ще: графік залишку, таблиця погашення (CSV) і сценарії «що, якщо платити більше».</p>"],
+["Період статистики","<p>Перемикайтеся між <b>Днем, Місяцем і Роком</b>.</p><p>Стрілки ‹ › гортають періоди назад і вперед.</p>"],
+["Плитки підсумків","<p>У плитках:</p><ul><li>витрати (з порівнянням з минулим періодом)</li><li>доходи</li><li>результат і норма заощаджень</li><li>платежі за боргами</li><li><b>залишок на початок і кінець</b> періоду</li></ul>"],
+["Графіки та категорії","<p>Натисніть на стовпець або точку графіка, щоб побачити значення.</p><p>Нижче:</p><ul><li>кільцева діаграма витрат за категоріями</li><li>джерела доходів</li><li>витрати за рахунками</li><li>найбільші витрати</li></ul>"],
+["Синхронізація","<p>Хмара — обмін із Google Таблицею. Колір крапки:</p><ul><li><b>сіра</b> — не налаштовано або очікування</li><li><b>синя</b> — іде обмін</li><li><b>зелена</b> — усе синхронізовано</li><li><b>червона</b> — помилка (натисніть, щоб повторити)</li></ul><p>Без підключення дані залишаються лише в цьому браузері.</p>"],
+["Налаштування","<p>Тут:</p><ul><li>тема: авто, світла, темна</li><li>ставки: на місяць або на рік</li><li>валюта й денний ліміт</li><li>підключення Google Таблиці</li><li>експорт та імпорт JSON, демодані</li></ul>"],
+["Гід завжди під рукою","<p>Значок <b>«?»</b> запускає цей гід знову. Його ж можна знайти в налаштуваннях, там само вмикається показ при кожному вході.</p><p>Приємного користування!</p>"]
+],
+en:[
+["Welcome to Seyfa","<p>This is a personal budget tracker. You can keep track of:</p><ul><li><b>expenses and income</b> by day</li><li><b>cards and credit limits</b></li><li><b>debts</b> and repayment schedules</li><li><b>goals</b> and savings</li><li><b>statistics</b> with charts</li></ul><p>Data is stored in your browser and can optionally sync with a Google Sheet. The guide takes about a minute.</p>"],
+["Five sections","<p>Navigation at the bottom:</p><ul><li><b>Today</b> — daily budget and transactions</li><li><b>Accounts</b> — cards and balances</li><li><b>Debts</b> — loans and borrowings</li><li><b>Goals</b> — savings and debt payoff</li><li><b>Statistics</b> — charts and totals</li></ul>"],
+["The “+” button — new transaction","<p>Available on every screen. Four transaction types:</p><ul><li><b>Expense</b></li><li><b>Income</b></li><li><b>Transfer</b> between your own accounts (a credit card payment is also a transfer)</li><li><b>Debt</b> — a loan payment or a repayment to you</li></ul><p>Any transaction can be opened, edited or deleted.</p>"],
+["Choosing a day","<p>The <b>‹ ›</b> arrows flip through days.</p><p>Tap the date to pick any day in the calendar and view or add its transactions.</p>"],
+["Daily budget","<p>The ring shows <b>how much you can still spend today</b>.</p><p>Unspent limit carries over to the next day, and overspending is deducted.</p><p>Ring color:</p><ul><li><b>green</b> — fine</li><li><b>orange</b> — close to the limit</li><li><b>red</b> — limit exceeded</li></ul>"],
+["Quick expenses","<p>Buttons for frequent expenses, e.g. “Coffee”.</p><ul><li><b>Tap</b> — record the expense at the saved price</li><li><b>Hold for 2 seconds</b> — change the price</li><li><b>“＋”</b> — create your own button</li></ul><p>Right after recording you can tap “Undo”.</p>"],
+["Monthly plan","<p>Enter:</p><ul><li>income</li><li>mandatory expenses</li><li>debt payments</li><li>savings</li></ul><p>The app will calculate <b>free money and the daily budget</b>.</p><p>Spending in planned categories follows the plan and doesn’t reduce the daily limit. Without a plan, the limit from settings applies.</p>"],
+["Cards and accounts","<p>The <b>“Add”</b> button creates a card or account: debit, credit, cash, savings.</p><p>For a credit card, enter:</p><ul><li>limit</li><li>rate</li><li>minimum payment</li><li>payment day</li></ul><p>The app shows the debt, available balance and the next payment.</p>"],
+["Accounts summary","<p>At the top — money in accounts, total credit card debt and available limits.</p><p>Tap a card to:</p><ul><li>edit its details</li><li><b>adjust the balance</b> manually (not income or expense)</li><li>view recent transactions</li></ul>"],
+["Debts","<p>Two lists:</p><ul><li><b>“I owe”</b> — loans and borrowings</li><li><b>“Owed to me”</b> — what others owe you</li></ul><p>Enter the balance, rate (monthly or yearly), payment and payment day.</p><p>The <b>“Make a payment”</b> button on a debt reduces the balance and deducts money from an account.</p>"],
+["Debts summary","<p>At the top:</p><ul><li>how much you owe</li><li>how much is owed to you</li><li>minimum payments per month</li><li><b>net worth</b></li></ul><p>Below — upcoming payments for two weeks and payoff progress for each debt.</p>"],
+["Goals","<p>Two kinds of goals:</p><ul><li><b>“Save up”</b> — amount, deadline (date or months), contribution, yield; you can link a savings account</li><li><b>“Pay off debts”</b> — choose debts and a repayment budget</li></ul>"],
+["Savings goal","<p>Open a goal. You’ll see:</p><ul><li>a <b>contribution simulator</b> with a slider</li><li>strategy options</li><li>sources of money for the contribution</li></ul><p>“Save as my plan” remembers your choice.</p>"],
+["Debt payoff goal","<p>Three strategies:</p><ul><li><b>“Avalanche”</b> — highest rate first</li><li><b>“Snowball”</b> — smallest first</li><li><b>“Minimum only”</b> — baseline comparison</li></ul><p>Also: a balance chart, a repayment table (CSV) and “what if I pay more” scenarios.</p>"],
+["Statistics period","<p>Switch between <b>Day, Month and Year</b>.</p><p>The ‹ › arrows move the period back and forward.</p>"],
+["Summary tiles","<p>The tiles show:</p><ul><li>spending (compared with the previous period)</li><li>income</li><li>result and savings rate</li><li>debt payments</li><li><b>opening and closing balance</b> of the period</li></ul>"],
+["Charts and categories","<p>Tap a bar or chart point to see the value.</p><p>Below:</p><ul><li>a donut chart of spending by category</li><li>income sources</li><li>spending by account</li><li>largest expenses</li></ul>"],
+["Sync","<p>The cloud exchanges data with your Google Sheet. Dot color:</p><ul><li><b>gray</b> — not set up or waiting</li><li><b>blue</b> — syncing</li><li><b>green</b> — all synced</li><li><b>red</b> — error (tap to retry)</li></ul><p>Without a connection, data stays only in this browser.</p>"],
+["Settings","<p>Here:</p><ul><li>theme: auto, light, dark</li><li>rates: monthly or yearly</li><li>currency and daily limit</li><li>Google Sheet connection</li><li>JSON export and import, demo data</li></ul>"],
+["The guide is always at hand","<p>The <b>“?”</b> icon starts this guide again. You can also find it in settings, where you can turn on showing it at every launch.</p><p>Enjoy!</p>"]
+]};
 const TABS=[['today','Сегодня'],['accounts','Счета'],['debts','Долги'],['goals','Цели'],['stats','Статистика']];
 
 /* ================= ЭКРАНЫ ================= */
@@ -463,9 +952,9 @@ function planNames(ym){if(PNC[ym])return PNC[ym];const p=getPlan(ym);return PNC[
 function budgetRows(ym){const p=getPlan(ym);if(!p)return [];const [y,m]=ym.split('-').map(Number),tx=txOn(ym+'-01',ym+'-'+pad(dim(y,m-1))).filter(t=>t.type==='expense');
  return (p.exp||[]).filter(r=>r.n&&num(r.a)>0).map(r=>{const f=tx.filter(t=>nk(t.category||'Прочее')===nk(r.n)).reduce((a,t)=>a+cvt(t),0),pl=num(r.a);return {n:r.n,p:pl,f,pct:f/pl}})}
 function budgetMsg(o){if(!o||o.type!=='expense'||!o.category||!o.date)return '';const r=budgetRows(o.date.slice(0,7)).find(x=>nk(x.n)===nk(o.category));if(!r)return '';
- const before=(r.f-num(o.amount))/r.p;if(before<1&&r.pct>=1)return r.n+': план превышен на '+money(r.f-r.p);if(before<.8&&r.pct>=.8)return r.n+': израсходовано '+Math.round(r.pct*100)+'% плана';return ''}
+ const before=(r.f-num(o.amount))/r.p;if(before<1&&r.pct>=1)return TT('%1: план превышен на %2',cn(r.n),money(r.f-r.p));if(before<.8&&r.pct>=.8)return TT('%1: израсходовано %2% плана',cn(r.n),Math.round(r.pct*100));return ''}
 function budgetAlerts(ym){const rows=budgetRows(ym).filter(r=>r.pct>=.8).sort((a,b)=>b.pct-a.pct).slice(0,3);
- return rows.map(r=>r.pct>=1?`<div class="note" style="margin-top:-10px;color:var(--red)">🔴 ${esc(r.n)}: план превышен на ${money(r.f-r.p)} (${money(r.f)} из ${money(r.p)})</div>`:`<div class="note" style="margin-top:-10px;color:var(--orange)">🟠 ${esc(r.n)}: ${Math.round(r.pct*100)}% плана (${money(r.f)} из ${money(r.p)})</div>`).join('')}
+ return rows.map(r=>r.pct>=1?`<div class="note" style="margin-top:-10px;color:var(--red)">🔴 ${esc(TT('%1: план превышен на %2 (%3 из %4)',cn(r.n),money(r.f-r.p),money(r.f),money(r.p)))}</div>`:`<div class="note" style="margin-top:-10px;color:var(--orange)">🟠 ${esc(TT('%1: %2% плана (%3 из %4)',cn(r.n),Math.round(r.pct*100),money(r.f),money(r.p)))}</div>`).join('')}
 /* Сколько траты уходит в дневной лимит: вне плана — вся сумма; по категории плана — только часть сверх плана (в день, когда порог пройден) */
 function overMap(ym){const key='o:'+ym;if(PNC[key])return PNC[key];const p=getPlan(ym),lim=new Map(),res=new Map(),run=new Map();
  ((p&&p.exp)||[]).forEach(r=>{if(r.n&&num(r.a)>0)lim.set(nk(r.n),(lim.get(nk(r.n))||0)+num(r.a))});
@@ -481,17 +970,17 @@ function totalAt(date){const acc=new Set(live('accounts').map(a=>a.id)),dir={};l
  for(const t of live('transactions')){if(t.date>date||!acc.has(t.accountId))continue;const a=cvt(t);if(t.type==='income'||t.type==='adjust')tot+=a;else if(t.type==='expense')tot-=a;else if(t.type==='debtpay'&&!acc.has(t.toAccountId))tot+=dir[t.debtId]==='lent'?a:-a}return tot}
 function txMeta(t){
  const a=num(t.amount);
- if(t.type==='transfer')return {icon:'⇄',color:'var(--gray)',title:'Перевод',sub:[accName(t.accountId)+' → '+accName(t.toAccountId),t.note].filter(Boolean).join(' · '),amt:moneyC(a,accCur(t.accountId)),cls:'mut'};
- if(t.type==='debtpay'&&t.toAccountId&&!t.debtId){return {icon:'💳',color:'var(--indigo)',title:'Платёж по карте: '+accName(t.toAccountId),sub:[accName(t.accountId),t.note].filter(Boolean).join(' · '),amt:'−'+money(a),cls:''}}
- if(t.type==='debtpay'){const d=byId('debts',t.debtId);const lent=d&&d.direction==='lent';return {icon:'💸',color:'var(--indigo)',title:(lent?'Возврат долга: ':'Платёж: ')+(d?d.name:'долг'),sub:[accName(t.accountId),t.note].filter(Boolean).join(' · '),amt:(lent?'+':'−')+money(a),cls:lent?'pos':''}}
- if(t.type==='adjust')return {icon:'✎',color:'var(--gray)',title:'Корректировка баланса',sub:[accName(t.accountId),t.note].filter(Boolean).join(' · '),amt:moneyC(a,accCur(t.accountId),true),cls:'mut'};
+ if(t.type==='transfer')return {icon:'⇄',color:'var(--gray)',title:T('Перевод'),sub:[accName(t.accountId)+' → '+accName(t.toAccountId),t.note].filter(Boolean).join(' · '),amt:moneyC(a,accCur(t.accountId)),cls:'mut'};
+ if(t.type==='debtpay'&&t.toAccountId&&!t.debtId){return {icon:'💳',color:'var(--indigo)',title:T('Платёж по карте: ')+accName(t.toAccountId),sub:[accName(t.accountId),t.note].filter(Boolean).join(' · '),amt:'−'+money(a),cls:''}}
+ if(t.type==='debtpay'){const d=byId('debts',t.debtId);const lent=d&&d.direction==='lent';return {icon:'💸',color:'var(--indigo)',title:(lent?T('Возврат долга: '):T('Платёж: '))+(d?d.name:T('долг')),sub:[accName(t.accountId),t.note].filter(Boolean).join(' · '),amt:(lent?'+':'−')+money(a),cls:lent?'pos':''}}
+ if(t.type==='adjust')return {icon:'✎',color:'var(--gray)',title:T('Корректировка баланса'),sub:[accName(t.accountId),t.note].filter(Boolean).join(' · '),amt:moneyC(a,accCur(t.accountId),true),cls:'mut'};
  const ci=catInfo(t.category,t.type);const inc=t.type==='income';
- return {icon:ci.icon,color:ci.color,title:t.category||(inc?'Доход':'Расход'),sub:[accName(t.accountId)||'Без счёта',t.note].filter(Boolean).join(' · '),amt:(inc?'+':'−')+moneyC(a,accCur(t.accountId)),cls:inc?'pos':''}}
+ return {icon:ci.icon,color:ci.color,title:t.category?cn(t.category):T(inc?'Доход':'Расход'),sub:[accName(t.accountId)||T('Без счёта'),t.note].filter(Boolean).join(' · '),amt:(inc?'+':'−')+moneyC(a,accCur(t.accountId)),cls:inc?'pos':''}}
 function txRow(t,withDate){const m=txMeta(t);
- return `<div class="row ico tap swp" data-act="editTx" data-id="${t.id}"><div class="ic" style="--c:${m.color}">${m.icon}</div><div class="grow"><div class="ell">${esc(m.title)}</div><div class="sub ell">${withDate?esc(dtf.format(pd(t.date)))+(m.sub?' · ':''):''}${esc(m.sub)}</div></div><div class="amt ${m.cls}">${m.amt}</div><button class="sdel" data-act="swDel" data-id="${t.id}" tabindex="-1">Удалить</button></div>`}
+ return `<div class="row ico tap swp" data-act="editTx" data-id="${t.id}"><div class="ic" style="--c:${m.color}">${m.icon}</div><div class="grow"><div class="ell">${esc(m.title)}</div><div class="sub ell">${withDate?esc(dtf.format(pd(t.date)))+(m.sub?' · ':''):''}${esc(m.sub)}</div></div><div class="amt ${m.cls}">${m.amt}</div><button class="sdel" data-act="swDel" data-id="${t.id}" tabindex="-1">${T('Удалить')}</button></div>`}
 
 function upcomingBlock(days,title){const up=upcoming(days);if(!up.length)return '';
- return `<div class="group-title">${title}</div><div class="group">${up.map(u=>`<div class="row ico tap" data-act="${u.kind==='card'?'editAcc':'editDebt'}" data-id="${u.id}"><div class="ic" style="--c:var(--orange)">🗓️</div><div class="grow"><div class="ell">${esc(u.name)}</div><div class="sub">${u.days===0?'сегодня':u.days===1?'завтра':'через '+u.days+' '+plural(u.days,['день','дня','дней'])} · ${dtf.format(pd(u.date))}</div></div><div class="amt">${u.min>0?money(u.min):'—'}</div></div>`).join('')}</div>`}
+ return `<div class="group-title">${title}</div><div class="group">${up.map(u=>`<div class="row ico tap" data-act="${u.kind==='card'?'editAcc':'editDebt'}" data-id="${u.id}"><div class="ic" style="--c:var(--orange)">🗓️</div><div class="grow"><div class="ell">${esc(u.name)}</div><div class="sub">${u.days===0?T('сегодня'):u.days===1?T('завтра'):TT('через %1 %2',u.days,PLT(u.days,['день','дня','дней']))} · ${dtf.format(pd(u.date))}</div></div><div class="amt">${u.min>0?money(u.min):'—'}</div></div>`).join('')}</div>`}
 
 function viewToday(){
  const d=TD.date,txs=txOn(d,d).sort(cmpTx),expAll=sumT(txs,'expense'),exp=sumC(txs),inc=sumT(txs,'income');
@@ -501,27 +990,27 @@ function viewToday(){
  const mAll=sumC(mtx),before=sumC(mtx.filter(t=>t.date<=d))-exp;
  const avail=limit*dom-before,left=avail-exp,pct=avail>0?Math.min(1,exp/avail):(exp>0?1:0);
  const col=!limit?'var(--blue)':left<0?'var(--red)':exp>avail*.8?'var(--orange)':'var(--green)';
- const ring=`<div class="ringwrap"><svg viewBox="0 0 140 140" class="ring"><circle cx="70" cy="70" r="60" class="ring-bg"/><circle cx="70" cy="70" r="60" class="ring-fg" style="stroke:${col};stroke-dasharray:${(pct*377).toFixed(1)} 377"/></svg><div class="ringtxt">${limit>0?`<b style="color:${left<0?'var(--red)':'var(--text)'}">${money(Math.abs(left))}</b><span>${left<0?'перерасход':'осталось'}</span>`:`<b>${money(exp)}</b><span>потрачено</span>`}</div></div>`;
- const side=limit>0?`<div><div class="k">Базовый лимит на день</div><div class="v">${money(limit)}</div></div><div><div class="k">Доступно сегодня (с переносом)</div><div class="v">${money(avail)}</div></div><div><div class="k">Потрачено в лимите</div><div class="v">${money(exp)}</div></div>`
-  :`<div class="k">Составьте план месяца или задайте дневной лимит — приложение покажет, сколько можно потратить сегодня.</div><button class="btn sm" data-act="settings">Задать лимит</button>`;
+ const ring=`<div class="ringwrap"><svg viewBox="0 0 140 140" class="ring"><circle cx="70" cy="70" r="60" class="ring-bg"/><circle cx="70" cy="70" r="60" class="ring-fg" style="stroke:${col};stroke-dasharray:${(pct*377).toFixed(1)} 377"/></svg><div class="ringtxt">${limit>0?`<b style="color:${left<0?'var(--red)':'var(--text)'}">${money(Math.abs(left))}</b><span>${T(left<0?'перерасход':'осталось')}</span>`:`<b>${money(exp)}</b><span>${T('потрачено')}</span>`}</div></div>`;
+ const side=limit>0?`<div><div class="k">${T('Базовый лимит на день')}</div><div class="v">${money(limit)}</div></div><div><div class="k">${T('Доступно сегодня (с переносом)')}</div><div class="v">${money(avail)}</div></div><div><div class="k">${T('Потрачено в лимите')}</div><div class="v">${money(exp)}</div></div>`
+  :`<div class="k">${T('Составьте план месяца или задайте дневной лимит — приложение покажет, сколько можно потратить сегодня.')}</div><button class="btn sm" data-act="settings">${T('Задать лимит')}</button>`;
  const mlim=limit*dm;
- const hint=!limit?'':left<0?`Лимит исчерпан: перерасход ${money(-left)} уменьшит доступную сумму следующих дней.`:`Можно потратить ещё ${money(left)}. Неиспользованный лимит переносится на следующий день.`;
+ const hint=!limit?'':left<0?TT('Лимит исчерпан: перерасход %1 уменьшит доступную сумму следующих дней.',money(-left)):TT('Можно потратить ещё %1. Неиспользованный лимит переносится на следующий день.',money(left));
  const share=pc&&pc.inc>0?pc.free/pc.inc:null;
- const warn=pc&&pc.free<0?`План превышает доходы на ${money(-pc.free)}.`:share!==null&&share<.2?'Свободно меньше 20% дохода — дневного бюджета может не хватить.':'';
+ const warn=pc&&pc.free<0?TT('План превышает доходы на %1.',money(-pc.free)):share!==null&&share<.2?T('Свободно меньше 20% дохода — дневного бюджета может не хватить.'):'';
  const pf=plan?(plan.exp||[]).filter(r=>r.n&&num(r.a)>0):[];
- const pfHtml=pf.length?`<div class="group-title">План и факт по расходам</div><div class="group">${pf.map(r=>{const f=mtx.filter(t=>t.type==='expense'&&nk(t.category||'Прочее')===nk(r.n)).reduce((s,t)=>s+cvt(t),0),p=num(r.a),ci=catInfo(r.n);return `<div class="row ico"><div class="ic" style="--c:${ci.color}">${ci.icon}</div><div class="grow"><div style="display:flex;justify-content:space-between;gap:8px"><span class="ell">${esc(r.n)}</span><span class="amt" style="color:${f>p?'var(--red)':f>=p*.8?'var(--orange)':'var(--text)'}">${money(f)} <span class="sub">/ ${money(p)}</span></span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.min(100,f/p*100).toFixed(1)}%;background:${f>p?'var(--red)':f>=p*.8?'var(--orange)':ci.color}"></i></div></div></div>`}).join('')}</div>`:'';
- const planRow=`<div class="group"><div class="row ico tap" data-act="plan" data-ym="${ym}"><div class="ic" style="--c:var(--indigo)">🗓️</div><div class="grow"><div>План месяца · ${esc(monthName(dd))}</div><div class="sub">${plan?`свободно ${money(pc.free)} · лимит ${money(limit)}/день`:'доходы, платежи и накопления → дневной бюджет'}</div></div><div style="color:var(--text3)">›</div></div></div>`;
+ const pfHtml=pf.length?`<div class="group-title">${T('План и факт по расходам')}</div><div class="group">${pf.map(r=>{const f=mtx.filter(t=>t.type==='expense'&&nk(t.category||'Прочее')===nk(r.n)).reduce((s,t)=>s+cvt(t),0),p=num(r.a),ci=catInfo(r.n);return `<div class="row ico"><div class="ic" style="--c:${ci.color}">${ci.icon}</div><div class="grow"><div style="display:flex;justify-content:space-between;gap:8px"><span class="ell">${esc(cn(r.n))}</span><span class="amt" style="color:${f>p?'var(--red)':f>=p*.8?'var(--orange)':'var(--text)'}">${money(f)} <span class="sub">/ ${money(p)}</span></span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.min(100,f/p*100).toFixed(1)}%;background:${f>p?'var(--red)':f>=p*.8?'var(--orange)':ci.color}"></i></div></div></div>`}).join('')}</div>`:'';
+ const planRow=`<div class="group"><div class="row ico tap" data-act="plan" data-ym="${ym}"><div class="ic" style="--c:var(--indigo)">🗓️</div><div class="grow"><div>${T('План месяца')} · ${esc(monthName(dd))}</div><div class="sub">${plan?TT('свободно %1 · лимит %2/день',money(pc.free),money(limit)):T('доходы, платежи и накопления → дневной бюджет')}</div></div><div style="color:var(--text3)">›</div></div></div>`;
  return `<h1 class="large">${esc(dayLabel(d))}</h1>
  <div class="daynav"><button data-act="dayPrev" aria-label="Назад">‹</button><div class="daylabel">${esc(dtfFull.format(dd))}<input type="date" id="dayPick" value="${d}"></div><button data-act="dayNext" aria-label="Вперёд">›</button></div>
  <div class="card hero">${ring}<div class="side">${side}</div></div>
  ${hint?`<div class="note" style="margin-top:-10px">${esc(hint)}</div>`:''}${warn?`<div class="note" style="margin-top:-12px;color:var(--orange)">${esc(warn)}</div>`:''}
  ${budgetAlerts(ym)}
  ${quickStrip()}
- <div class="grid2"><div class="tile"><div class="k">Доходы</div><div class="v" style="color:var(--green)">${money(inc)}</div></div><div class="tile"><div class="k">Расходы</div><div class="v">${money(expAll)}</div>${plan&&Math.abs(expAll-exp)>0.005?`<div class="sub">в лимите ${money(exp)}</div>`:''}</div></div>
- ${limit>0?`<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>${esc(monthName(dd))}</span><span class="sub">в лимите ${money(mAll)} из ${money(mlim)}</span></div><div class="bar lg"><i style="width:${Math.min(100,mAll/mlim*100).toFixed(1)}%;background:${mAll>mlim?'var(--red)':'var(--blue)'}"></i></div></div>`:''}
+ <div class="grid2"><div class="tile"><div class="k">${T('Доходы')}</div><div class="v" style="color:var(--green)">${money(inc)}</div></div><div class="tile"><div class="k">${T('Расходы')}</div><div class="v">${money(expAll)}</div>${plan&&Math.abs(expAll-exp)>0.005?`<div class="sub">${TT('в лимите %1',money(exp))}</div>`:''}</div></div>
+ ${limit>0?`<div class="card" style="padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>${esc(monthName(dd))}</span><span class="sub">${TT('в лимите %1 из %2',money(mAll),money(mlim))}</span></div><div class="bar lg"><i style="width:${Math.min(100,mAll/mlim*100).toFixed(1)}%;background:${mAll>mlim?'var(--red)':'var(--blue)'}"></i></div></div>`:''}
  ${planRow}${pfHtml}
- ${d===today()?upcomingBlock(7,'Ближайшие платежи'):''}
- <div class="group-title"><span>Операции</span><span><button class="link" data-act="cal">Календарь</button> · <button class="link" data-act="allTx">Все ›</button></span></div><div class="group">${txs.length?txs.map(t=>txRow(t)).join(''):'<div class="empty">Операций нет. Нажмите «+», чтобы добавить.</div>'}</div>`}
+ ${d===today()?upcomingBlock(7,T('Ближайшие платежи')):''}
+ <div class="group-title"><span>${T('Операции')}</span><span><button class="link" data-act="cal">${T('Календарь')}</button> · <button class="link" data-act="allTx">${T('Все ›')}</button></span></div><div class="group">${txs.length?txs.map(t=>txRow(t)).join(''):`<div class="empty">${T('Операций нет. Нажмите «+», чтобы добавить.')}</div>`}</div>`}
 
 function walletCard(a,spent){
  const b=C().bal[a.id],g=gCls(a.color),gs=gSty(a.color);
@@ -723,7 +1212,7 @@ function viewStats(){
  <div class="seg">${[['day','День'],['month','Месяц'],['year','Год']].map(([k,v])=>`<button data-act="statMode" data-v="${k}" class="${mode===k?'on':''}">${v}</button>`).join('')}</div>
  <div class="daynav"><button data-act="statPrev" aria-label="Назад">‹</button><div class="daylabel" style="text-transform:capitalize">${esc(label)}</div><button data-act="statNext" aria-label="Вперёд">›</button></div>
  <div class="grid2"><div class="tile"><div class="k">Расходы</div><div class="v">${money(exp)}</div>${cmp}</div><div class="tile"><div class="k">Доходы</div><div class="v" style="color:var(--green)">${money(inc)}</div></div>
- <div class="tile"><div class="k">Результат (доход − расход)</div><div class="v sm" style="color:${inc-exp>=0?'var(--green)':'var(--red)'}">${money(inc-exp,true)}</div>${inc>0?`<div class="sub">норма сбережений ${((inc-exp)/inc*100).toFixed(0)}%</div>`:''}</div>
+ <div class="tile"><div class="k">Результат (доход − расход)</div><div class="v sm" style="color:${inc-exp>=0?'var(--green)':'var(--red)'}">${money(inc-exp,true)}</div>${inc>0?`<div class="sub">норма сбережений ${((inc-exp)/inc*100).toFixed(0)}%</div>`:''}${debtPaid>0?`<div class="sub" style="margin-top:6px;color:${inc-exp-debtPaid>=0?'var(--green)':'var(--red)'}">После платежей по долгам: <b>${money(inc-exp-debtPaid,true)}</b></div>`:''}</div>
  <div class="tile"><div class="k">Платежи по долгам</div><div class="v sm">${money(debtPaid)}</div>${saved>0?`<div class="sub">в накопления ${money(saved)}</div>`:''}</div>
  <div class="tile"><div class="k">Остаток на начало</div><div class="v sm">${money(tStart)}</div><div class="sub">все счета, за вычетом долга по картам</div></div><div class="tile"><div class="k">Остаток на конец</div><div class="v sm">${money(tEnd)}</div></div></div>
  ${charts}
@@ -746,7 +1235,7 @@ function render(){
  const inGoal=tab==='goals'&&GL.open;
  $('#navL').innerHTML=inGoal?'<button class="nbtn" data-act="backGoal" style="font-size:17px;padding-left:4px">‹ Цели</button>':'';
  $('#navT').textContent=inGoal?(byId('goals',GL.open)||{}).name||'':TITLES[tab];
- window.scrollTo(0,y);
+ window.scrollTo(0,y);trStart();if(trLang!==getLang()){trLang=getLang();trNode(document.body,trLang)}
  if(window.__lr)window.__lr();
  if(inGoal){const g=byId('goals',GL.open);if(g&&g.type==='save')updateSaveSim();else if(g)updateDebtSim()}
 }
@@ -755,7 +1244,7 @@ window.addEventListener('scroll',()=>$('#nav').classList.toggle('solid',window.s
 /* ================= ЛИСТЫ (МОДАЛКИ) ================= */
 function sheet(o){
  const el=document.createElement('div');el.className='overlay';
- el.innerHTML=`<div class="sheet" role="dialog"><div class="sheet-h"><button class="link" data-x>${o.noSave?'':'Отмена'}</button><div class="sheet-t">${esc(o.title)}</div>${o.noSave?'<button class="link b" data-x>Готово</button>':`<button class="link b" data-ok>${o.saveLabel||'Готово'}</button>`}</div><div class="sheet-b">${o.body}</div></div>`;
+ el.innerHTML=`<div class="sheet" role="dialog"><div class="sheet-h"><button class="link" data-x>${o.noSave?'':T('Отмена')}</button><div class="sheet-t">${esc(o.title)}</div>${o.noSave?'<button class="link b" data-x>'+T('Готово')+'</button>':`<button class="link b" data-ok>${o.saveLabel||T('Готово')}</button>`}</div><div class="sheet-b">${o.body}</div></div>`;
  document.body.appendChild(el);document.body.classList.add('noscroll');
  const close=()=>{el.remove();if(!$('.overlay'))document.body.classList.remove('noscroll')};
  el.addEventListener('mousedown',e=>{if(e.target===el)close()});
@@ -763,7 +1252,7 @@ function sheet(o){
  const ok=$('[data-ok]',el);if(ok)ok.onclick=()=>{if(o.save(el)!==false)close()};
  if(o.onMount)o.onMount(el,close);return {el,close}}
 function confirmSheet(text,okLabel){return new Promise(res=>{const el=document.createElement('div');el.className='overlay top';
- el.innerHTML=`<div class="action"><div class="box"><div class="msg">${esc(text)}</div><button class="abtn" data-v="1">${okLabel||'Удалить'}</button></div><button class="abtn cancel">Отмена</button></div>`;
+ el.innerHTML=`<div class="action"><div class="box"><div class="msg">${esc(text)}</div><button class="abtn" data-v="1">${okLabel||T('Удалить')}</button></div><button class="abtn cancel">${T('Отмена')}</button></div>`;
  document.body.appendChild(el);const done=v=>{el.remove();res(v)};
  $('[data-v]',el).onclick=()=>done(true);$('.cancel',el).onclick=()=>done(false);el.addEventListener('mousedown',e=>{if(e.target===el)done(false)})})}
 const opt=(v,t,sel)=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(t)}</option>`;
@@ -774,60 +1263,60 @@ function txSheet(id,preset){
  preset=preset||{};const ex=id?byId('transactions',id):null;
  const t=ex?Object.assign({},ex):{id:uid(),date:preset.date||(tab==='today'?TD.date:today()),type:preset.type||'expense',amount:preset.amount||'',category:'',accountId:preset.accountId!==undefined?preset.accountId:lastAcc(),toAccountId:preset.toAccountId||'',debtId:preset.debtId||'',note:''};
  let type=t.type,cat=t.category;const accs=live('accounts'),debts=live('debts');
- const body=`<div class="seg" id="tx_type">${[['expense','Расход'],['income','Доход'],['transfer','Перевод'],['debtpay','Долг']].map(([k,n])=>`<button data-v="${k}">${n}</button>`).join('')}</div>
+ const body=`<div class="seg" id="tx_type">${[['expense','Расход'],['income','Доход'],['transfer','Перевод'],['debtpay','Долг']].map(([k,n])=>`<button data-v="${k}">${T(n)}</button>`).join('')}</div>
  <div class="amtbox"><input id="tx_amt" inputmode="decimal" placeholder="0" value="${t.amount?esc(t.amount):''}" autocomplete="off"><span id="tx_cur">${esc(cur())}</span></div>
- <div class="group" id="tx_cg"><div class="row catsearch"><input id="tx_cs" placeholder="Поиск или своя категория" autocomplete="off" autocapitalize="sentences" enterkeyhint="done"></div><div class="chips two" id="tx_cats"></div></div>
+ <div class="group" id="tx_cg"><div class="row catsearch"><input id="tx_cs" placeholder="${T('Поиск или своя категория')}" autocomplete="off" autocapitalize="sentences" enterkeyhint="done"></div><div class="chips two" id="tx_cats"></div></div>
  <div class="group">
-  <div class="row" id="r_acc"><label id="l_acc">Счёт</label><select id="tx_acc"></select></div>
-  <div class="row" id="r_to"><label>На счёт</label><select id="tx_to"></select></div>
-  <div class="row" id="r_toamt"><label id="l_toamt">Получено</label><input id="tx_toamt" inputmode="decimal" placeholder="по курсу" value="${num(t.toAmount)>0?esc(t.toAmount):''}"></div>
-  <div class="row" id="r_debt"><label>Долг</label><select id="tx_debt"></select></div>
-  <div class="row"><label>Дата</label><input type="date" id="tx_date" value="${t.date}"></div>
-  <div class="row"><label>Заметка</label><input id="tx_note" placeholder="Необязательно" value="${esc(t.note)}"></div></div>
- ${ex?'<button class="btn red" data-del>Удалить операцию</button>':''}`;
- sheet({title:ex?'Операция':'Новая операция',body,saveLabel:ex?'Сохранить':'Добавить',onMount:(el,close)=>{
+  <div class="row" id="r_acc"><label id="l_acc">${T('Счёт')}</label><select id="tx_acc"></select></div>
+  <div class="row" id="r_to"><label>${T('На счёт')}</label><select id="tx_to"></select></div>
+  <div class="row" id="r_toamt"><label id="l_toamt">${T('Получено')}</label><input id="tx_toamt" inputmode="decimal" placeholder="${T('по курсу')}" value="${num(t.toAmount)>0?esc(t.toAmount):''}"></div>
+  <div class="row" id="r_debt"><label>${T('Долг')}</label><select id="tx_debt"></select></div>
+  <div class="row"><label>${T('Дата')}</label><input type="date" id="tx_date" value="${t.date}"></div>
+  <div class="row"><label>${T('Заметка')}</label><input id="tx_note" placeholder="${T('Необязательно')}" value="${esc(t.note)}"></div></div>
+ ${ex?`<button class="btn red" data-del>${T('Удалить операцию')}</button>`:''}`;
+ sheet({title:T(ex?'Операция':'Новая операция'),body,saveLabel:T(ex?'Сохранить':'Добавить'),onMount:(el,close)=>{
   const q=s=>$(s,el);
   const an=a=>a.name+(a.currency?' · '+a.currency:'');
-  q('#tx_acc').innerHTML=opt('','— без счёта —',t.accountId)+accs.map(a=>opt(a.id,an(a),t.accountId)).join('');
+  q('#tx_acc').innerHTML=opt('',T('— без счёта —'),t.accountId)+accs.map(a=>opt(a.id,an(a),t.accountId)).join('');
   q('#tx_to').innerHTML=accs.map(a=>opt(a.id,an(a),t.toAccountId||(accs.find(x=>x.id!==t.accountId)||{}).id)).join('');
   const cardsD=accs.filter(a=>a.kind==='credit'),dsel=t.debtId||(t.toAccountId&&type==='debtpay'?'a:'+t.toAccountId:'');
-  q('#tx_debt').innerHTML=debts.map(d=>{const r=C().rem[d.id];return opt(d.id,d.name+' · '+money(r),dsel)}).join('')+cardsD.map(a=>opt('a:'+a.id,'💳 '+a.name+' · '+money(Math.max(0,-C().bal[a.id])),dsel)).join('')||'<option value="">нет долгов</option>';
+  q('#tx_debt').innerHTML=debts.map(d=>{const r=C().rem[d.id];return opt(d.id,d.name+' · '+money(r),dsel)}).join('')+cardsD.map(a=>opt('a:'+a.id,'💳 '+a.name+' · '+money(Math.max(0,-C().bal[a.id])),dsel)).join('')||`<option value="">${T('нет долгов')}</option>`;
   const catQ=()=>q('#tx_cs').value.trim();
   const renderCats=()=>{const k=catQ().toLowerCase(),all=k?catsAll(type):catList(type,cat);
-   let list=k?all.filter(n=>n.toLowerCase().includes(k)):all.slice();
+   let list=k?all.filter(n=>n.toLowerCase().includes(k)||cn(n).toLowerCase().includes(k)):all.slice();
    if(cat&&!k){const i=list.indexOf(cat);if(i>0){list.splice(i,1);list.unshift(cat)}}
-   const exact=all.some(n=>n.toLowerCase()===k);
-   q('#tx_cats').innerHTML=list.map(n=>`<button class="chip ${n===cat?'on':''}" data-c="${esc(n)}">${catInfo(n,type).icon} ${esc(n)}</button>`).join('')+(k&&!exact?`<button class="chip new" data-new="${esc(catQ())}">＋ Создать «${esc(catQ())}»</button>`:'');q('#tx_cats').scrollLeft=0};
+   const exact=all.some(n=>n.toLowerCase()===k||cn(n).toLowerCase()===k);
+   q('#tx_cats').innerHTML=list.map(n=>`<button class="chip ${n===cat?'on':''}" data-c="${esc(n)}">${catInfo(n,type).icon} ${esc(cn(n))}</button>`).join('')+(k&&!exact?`<button class="chip new" data-new="${esc(catQ())}">${esc(TT('＋ Создать «%1»',catQ()))}</button>`:'');q('#tx_cats').scrollLeft=0};
   const addCat=n=>{n=n.trim().slice(0,24);if(!n)return;const l=setting('customCats',[]);if(!l.some(c=>c.n===n&&c.t===type))l.push({n,t:type});setSetting('customCats',l);cat=n;q('#tx_cs').value='';renderCats()};
   const curUi=()=>{const sc=accCur(q('#tx_acc').value),dc=accCur(q('#tx_to').value);q('#tx_cur').textContent=CSYM[sc]||cur();
    const x=type==='transfer'&&q('#tx_acc').value&&q('#tx_to').value&&sc!==dc;q('#r_toamt').hidden=!x;
-   if(x){const r=rateOf(sc)&&rateOf(dc)?rateOf(sc)/rateOf(dc):0,a=num(q('#tx_amt').value);q('#l_toamt').textContent='Получено, '+(CSYM[dc]||cur());q('#tx_toamt').placeholder=r&&a>0?String(Math.round(a*r*100)/100):'по курсу'}};
+   if(x){const r=rateOf(sc)&&rateOf(dc)?rateOf(sc)/rateOf(dc):0,a=num(q('#tx_amt').value);q('#l_toamt').textContent=T('Получено, ')+(CSYM[dc]||cur());q('#tx_toamt').placeholder=r&&a>0?String(Math.round(a*r*100)/100):T('по курсу')}};
   const upd=()=>{$$('#tx_type button',el).forEach(b=>b.classList.toggle('on',b.dataset.v===type));
    q('#tx_cg').hidden=!(type==='expense'||type==='income');q('#r_to').hidden=type!=='transfer';q('#r_debt').hidden=type!=='debtpay';
    const dl=byId('debts',q('#tx_debt').value);
-   q('#l_acc').textContent=type==='income'?'На счёт':type==='transfer'?'Со счёта':type==='debtpay'?(dl&&dl.direction==='lent'?'На счёт':'Со счёта'):'Счёт';
-   q('#tx_acc').firstChild.textContent=type==='transfer'||type==='debtpay'?'— выберите —':'— без счёта —';renderCats();curUi()};
+   q('#l_acc').textContent=T(type==='income'?'На счёт':type==='transfer'?'Со счёта':type==='debtpay'?(dl&&dl.direction==='lent'?'На счёт':'Со счёта'):'Счёт');
+   q('#tx_acc').firstChild.textContent=T(type==='transfer'||type==='debtpay'?'— выберите —':'— без счёта —');renderCats();curUi()};
   $$('#tx_type button',el).forEach(b=>b.onclick=()=>{type=b.dataset.v;cat='';q('#tx_cs').value='';upd()});
   q('#tx_debt').onchange=upd;q('#tx_acc').onchange=curUi;q('#tx_to').onchange=curUi;q('#tx_amt').addEventListener('input',curUi);
   q('#tx_cats').onclick=e=>{const c=e.target.closest('[data-c]'),nw=e.target.closest('[data-new]');
    if(c){cat=c.dataset.c;q('#tx_cs').value='';renderCats()}else if(nw)addCat(nw.dataset.new)};
   q('#tx_cs').oninput=renderCats;
   q('#tx_cs').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();const k=catQ().toLowerCase();if(!k)return;
-   const all=catsAll(type),ex1=all.find(n=>n.toLowerCase()===k),m=all.filter(n=>n.toLowerCase().includes(k));
+   const all=catsAll(type),ex1=all.find(n=>n.toLowerCase()===k||cn(n).toLowerCase()===k),m=all.filter(n=>n.toLowerCase().includes(k)||cn(n).toLowerCase().includes(k));
    if(ex1){cat=ex1;q('#tx_cs').value='';renderCats()}else if(m.length===1){cat=m[0];q('#tx_cs').value='';renderCats()}else addCat(catQ());q('#tx_cs').blur()};
   upd();if(!ex)setTimeout(()=>q('#tx_amt').focus(),150);
-  const d=q('[data-del]');if(d)d.onclick=async()=>{if(await confirmSheet('Удалить эту операцию?')){del('transactions',t.id);close();render()}};
+  const d=q('[data-del]');if(d)d.onclick=async()=>{if(await confirmSheet(T('Удалить эту операцию?'))){del('transactions',t.id);close();render()}};
  },save:el=>{const q=s=>$(s,el),amount=num(q('#tx_amt').value);
   if(amount<=0){shake(q('.amtbox'));q('#tx_amt').focus();return false}
   const acc=q('#tx_acc').value,to=q('#tx_to').value,debt=q('#tx_debt').value;
-  if(type==='transfer'&&(!acc||!to||acc===to)){toast('Выберите два разных счёта');return false}
-  if(type==='debtpay'&&!debt){toast('Сначала добавьте долг в разделе «Долги»');return false}
+  if(type==='transfer'&&(!acc||!to||acc===to)){toast(T('Выберите два разных счёта'));return false}
+  if(type==='debtpay'&&!debt){toast(T('Сначала добавьте долг в разделе «Долги»'));return false}
   const cardId=debt.startsWith('a:')?debt.slice(2):'';
-  if(type==='debtpay'&&!acc){toast('Выберите счёт, с которого платите');return false}
-  if(type==='debtpay'&&cardId&&acc===cardId){toast('Выберите другой счёт — не саму карту');return false}
-  if(type==='debtpay'&&accCur(acc)){toast('Платёж по долгу — со счёта в основной валюте');return false}
+  if(type==='debtpay'&&!acc){toast(T('Выберите счёт, с которого платите'));return false}
+  if(type==='debtpay'&&cardId&&acc===cardId){toast(T('Выберите другой счёт — не саму карту'));return false}
+  if(type==='debtpay'&&accCur(acc)){toast(T('Платёж по долгу — со счёта в основной валюте'));return false}
   const o=Object.assign({},t,{type,amount,category:type==='expense'||type==='income'?(cat||'Прочее'):'',accountId:acc,toAccountId:type==='transfer'?to:(type==='debtpay'&&cardId?cardId:''),debtId:type==='debtpay'&&!cardId?debt:'',toAmount:type==='transfer'&&accCur(acc)!==accCur(to)?num(q('#tx_toamt').value):0,date:q('#tx_date').value||today(),note:q('#tx_note').value.trim()});
-  save('transactions',o);if(acc)localStorage.setItem('budget.lastAcc',acc);render();const bm=ex?'':budgetMsg(o);toast(ex?'Сохранено':bm?'Добавлено · '+bm:'Добавлено')}});}
+  save('transactions',o);if(acc)localStorage.setItem('budget.lastAcc',acc);render();const bm=ex?'':budgetMsg(o);toast(ex?T('Сохранено'):bm?TT('Добавлено · %1',bm):T('Добавлено'))}});}
 
 function txListSheet(f0){
  f0=f0||{};const F={acc:f0.acc||'',cat:f0.cat||'',per:f0.per||'',q:''};let limit=100;
@@ -850,7 +1339,7 @@ function txListSheet(f0){
    if(k){const m=txMeta(t);if(!(m.title+' '+m.sub+' '+(t.note||'')+' '+(t.category||'')+' '+accName(t.accountId)+' '+accName(t.toAccountId)+' '+t.amount).toLowerCase().includes(k))return false}
    return true};
   const draw=()=>{const k=F.q.trim().toLowerCase(),r=rng(),all=live('transactions').filter(t=>match(t,r,k)).sort(cmpTx),shown=all.slice(0,limit);
-   q('#l_sum').textContent=all.length?`${all.length} ${plural(all.length,['операция','операции','операций'])} · расходы ${money(sumT(all,'expense'))} · доходы ${money(sumT(all,'income'))}`:'';
+   q('#l_sum').textContent=all.length?`${all.length} ${PLT(all.length,['операция','операции','операций'])} · расходы ${money(sumT(all,'expense'))} · доходы ${money(sumT(all,'income'))}`:'';
    let h='',day='',open=false;
    shown.forEach(t=>{if(t.date!==day){if(open)h+='</div>';day=t.date;h+=`<div class="group-title">${esc(dtf.format(pd(day)))}</div><div class="group">`;open=true}h+=txRow(t)});
    if(open)h+='</div>';
@@ -1039,11 +1528,11 @@ function contribSheet(id){
 const LONG_MS=2000;
 const quickList=()=>setting('quick',[]);
 function quickStrip(){const L=quickList();
- return `<div class="group-title" style="margin-top:4px">Быстрые траты</div><div class="qrow" id="qrow">${L.map(b=>`<button class="qchip" data-q="${esc(b.id)}"><span>${catInfo(b.cat,'expense').icon}</span><span>${esc(b.n)}</span><span class="qa">${num(b.a)>0?money(b.a):'цена?'}</span></button>`).join('')}<button class="qchip qadd" data-act="qNew" aria-label="Добавить быструю трату">＋</button></div>${L.length?'<div class="note" style="margin-top:-4px">Нажатие записывает трату, удержание 2 секунды меняет цену.</div>':'<div class="note" style="margin-top:-4px">Нажмите ＋ и создайте кнопку для частой траты, например «Кофе».</div>'}`}
+ return `<div class="group-title" style="margin-top:4px">${T('Быстрые траты')}</div><div class="qrow" id="qrow">${L.map(b=>`<button class="qchip" data-q="${esc(b.id)}"><span>${catInfo(b.cat,'expense').icon}</span><span>${esc(b.n)}</span><span class="qa">${num(b.a)>0?money(b.a):T('цена?')}</span></button>`).join('')}<button class="qchip qadd" data-act="qNew" aria-label="Добавить быструю трату">＋</button></div>${L.length?`<div class="note" style="margin-top:-4px">${T('Нажатие записывает трату, удержание 2 секунды меняет цену.')}</div>`:`<div class="note" style="margin-top:-4px">${T('Нажмите ＋ и создайте кнопку для частой траты, например «Кофе».')}</div>`}`}
 function quickAdd(id){const b=quickList().find(x=>x.id===id);if(!b)return;
  if(!(num(b.a)>0)){quickPriceSheet(id);return}
  const acc=b.acc&&byId('accounts',b.acc)?b.acc:lastAcc(),o={id:uid(),date:TD.date,type:'expense',amount:num(b.a),category:b.cat||'Прочее',accountId:acc,toAccountId:'',debtId:'',note:b.n};
- save('transactions',o);render();const bm=budgetMsg(o);toastAct(b.n+' −'+money(b.a)+(bm?' · '+bm:''),'Отменить',()=>{del('transactions',o.id);render()})}
+ save('transactions',o);render();const bm=budgetMsg(o);toastAct(b.n+' −'+money(b.a)+(bm?' · '+bm:''),T('Отменить'),()=>{del('transactions',o.id);render()})}
 function quickPriceSheet(id){const b=quickList().find(x=>x.id===id);if(!b)return;
  sheet({title:b.n,saveLabel:'Сохранить',body:`<div class="amtbox"><input id="qp_a" inputmode="decimal" placeholder="0" value="${num(b.a)>0?esc(b.a):''}" autocomplete="off"><span>${esc(cur())}</span></div><div class="note">Новая цена для кнопки «${esc(b.n)}». Уже записанные операции не меняются.</div>`,
   onMount:el=>setTimeout(()=>{const i=$('#qp_a',el);i.focus();i.select()},150),
@@ -1332,7 +1821,7 @@ function tourEnd(silent){const o=$('#tour');if(o)o.remove();document.body.style.
  tourI=-1;if(!silent){try{localStorage.setItem('budget.tour','1')}catch(e){}}}
 function tourShow(){const st=TOUR[tourI];
  if(st.tab&&(tab!==st.tab||GL.open)){tab=st.tab;GL.open=null;window.scrollTo(0,0);render()}
- $('#tourCard').innerHTML=`<div class="tc-n">${tourI+1} из ${TOUR.length}</div><div class="tc-t">${st.t}</div><div class="tc-x">${st.x}</div><div class="tc-dots">${TOUR.map((_,i)=>`<i class="${i===tourI?'on':''}"></i>`).join('')}</div>
+ const TL=TOURL[getLang()],tt=TL?TL[tourI][0]:st.t,tx=TL?TL[tourI][1]:st.x;$('#tourCard').innerHTML=`<div class="tc-n">${TT('%1 из %2',tourI+1,TOUR.length)}</div><div class="tc-t">${tt}</div><div class="tc-x">${tx}</div><div class="tc-dots">${TOUR.map((_,i)=>`<i class="${i===tourI?'on':''}"></i>`).join('')}</div>
   <div class="tc-b"><button class="link" data-act="${tourI?'tourPrev':'tourSkip'}">${tourI?'Назад':'Пропустить'}</button><div style="display:flex;gap:8px;align-items:center">${tourI&&tourI<TOUR.length-1?'<button class="link" data-act="tourSkip">Закрыть</button>':''}<button class="btn" data-act="tourNext">${tourI===TOUR.length-1?'Готово':tourI?'Далее':'Начать'}</button></div></div>`;
  const el=st.sel?$(st.sel):null;document.body.style.paddingBottom='100vh';
  if(el&&!tourFixed(el)){const r0=el.getBoundingClientRect();window.scrollTo(0,Math.max(0,window.scrollY+r0.top-56))}
