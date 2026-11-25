@@ -220,6 +220,7 @@ details ol{margin:6px 0;padding-left:20px;color:var(--text2);font-size:14px;line
 .tc-b{display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:8px}
 .tc-b .btn{width:auto;margin:0;padding:9px 18px}.tc-dots{display:flex;gap:4px;flex-wrap:wrap;margin-top:16px}
 .tc-dots i{width:6px;height:6px;border-radius:3px;background:var(--fill)}.tc-dots i.on{background:var(--blue)}
+.bar{position:relative}.zk{position:absolute;top:0;bottom:0;width:1.5px;background:var(--card,#fff);opacity:.9}
 </style>
 </head>
 <body>
@@ -504,6 +505,7 @@ const PLT=(n,ruForms)=>{const l=getLang();if(l==='ru')return plural(n,ruForms);c
 
 Object.assign(DICT,{'год|года|лет':['рік|роки|років','year|years'],'%1 из %2':['%1 з %2','%1 of %2'],'операция|операции|операций':['операція|операції|операцій','transaction|transactions']});
 const PH={
+'можно тратить':['можна витрачати','safe to spend'],'потрачена заметная часть':['витрачено помітну частину','a good part spent'],'осталось совсем немного':['залишилось зовсім трохи','almost used up'],'лимит превышен':['ліміт перевищено','limit exceeded'],
 'После платежей по долгам:':['Після платежів за боргами:','After debt payments:'],
 'лимит':['ліміт','limit'],'Лимит':['Ліміт','Limit'],'до':['до','by'],
 'Гид по приложению':['Гід по застосунку','App guide'],
@@ -941,6 +943,7 @@ en:[
 ["Settings","<p>Here:</p><ul><li>theme: auto, light, dark</li><li>rates: monthly or yearly</li><li>currency and daily limit</li><li>Google Sheet connection</li><li>JSON export and import, demo data</li></ul>"],
 ["The guide is always at hand","<p>The <b>“?”</b> icon starts this guide again. You can also find it in settings, where you can turn on showing it at every launch.</p><p>Enjoy!</p>"]
 ]};
+const zoneOf=(f,p)=>{const r=p>0?f/p:0;return r>1?{color:'var(--red)',label:'лимит превышен'}:r>=.8?{color:'var(--orange)',label:'осталось совсем немного'}:r>=.5?{color:'var(--yellow)',tx:'#b78a00',label:'потрачена заметная часть'}:{color:'var(--green)',label:'можно тратить'}};
 const TABS=[['today','Сегодня'],['accounts','Счета'],['debts','Долги'],['goals','Цели'],['stats','Статистика']];
 
 /* ================= ЭКРАНЫ ================= */
@@ -998,7 +1001,7 @@ function viewToday(){
  const share=pc&&pc.inc>0?pc.free/pc.inc:null;
  const warn=pc&&pc.free<0?TT('План превышает доходы на %1.',money(-pc.free)):share!==null&&share<.2?T('Свободно меньше 20% дохода — дневного бюджета может не хватить.'):'';
  const pf=plan?(plan.exp||[]).filter(r=>r.n&&num(r.a)>0):[];
- const pfHtml=pf.length?`<div class="group-title">${T('План и факт по расходам')}</div><div class="group">${pf.map(r=>{const f=mtx.filter(t=>t.type==='expense'&&nk(t.category||'Прочее')===nk(r.n)).reduce((s,t)=>s+cvt(t),0),p=num(r.a),ci=catInfo(r.n);return `<div class="row ico"><div class="ic" style="--c:${ci.color}">${ci.icon}</div><div class="grow"><div style="display:flex;justify-content:space-between;gap:8px"><span class="ell">${esc(cn(r.n))}</span><span class="amt" style="color:${f>p?'var(--red)':f>=p*.8?'var(--orange)':'var(--text)'}">${money(f)} <span class="sub">/ ${money(p)}</span></span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.min(100,f/p*100).toFixed(1)}%;background:${f>p?'var(--red)':f>=p*.8?'var(--orange)':ci.color}"></i></div></div></div>`}).join('')}</div>`:'';
+ const pfHtml=pf.length?`<div class="group-title">${T('План и факт по расходам')}</div><div class="group">${pf.map(r=>{const f=mtx.filter(t=>t.type==='expense'&&nk(t.category||'Прочее')===nk(r.n)).reduce((s,t)=>s+cvt(t),0),p=num(r.a),ci=catInfo(r.n);const zc=zoneOf(f,p);zc.tx=zc.tx||zc.color;return `<div class="row ico"><div class="ic" style="--c:${ci.color}">${ci.icon}</div><div class="grow"><div style="display:flex;justify-content:space-between;gap:8px"><span class="ell">${esc(cn(r.n))}</span><span class="amt" style="color:${zc.tx}">${money(f)} <span class="sub">/ ${money(p)}</span></span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.min(100,f/p*100).toFixed(1)}%;background:${zc.color}"></i><u class="zk" style="left:50%"></u><u class="zk" style="left:80%"></u></div></div></div>`}).join('')}</div>`:'';
  const planRow=`<div class="group"><div class="row ico tap" data-act="plan" data-ym="${ym}"><div class="ic" style="--c:var(--indigo)">🗓️</div><div class="grow"><div>${T('План месяца')} · ${esc(monthName(dd))}</div><div class="sub">${plan?TT('свободно %1 · лимит %2/день',money(pc.free),money(limit)):T('доходы, платежи и накопления → дневной бюджет')}</div></div><div style="color:var(--text3)">›</div></div></div>`;
  return `<h1 class="large">${esc(dayLabel(d))}</h1>
  <div class="daynav"><button data-act="dayPrev" aria-label="Назад">‹</button><div class="daylabel">${esc(dtfFull.format(dd))}<input type="date" id="dayPick" value="${d}"></div><button data-act="dayNext" aria-label="Вперёд">›</button></div>
